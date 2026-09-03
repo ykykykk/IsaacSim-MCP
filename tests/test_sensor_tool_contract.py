@@ -226,7 +226,7 @@ def test_capture_camera_output_routes_rgb_image_mode_to_native_png_content():
     ]
 
 
-def test_capture_camera_output_warms_up_and_retries_within_one_tool_call(monkeypatch):
+def test_capture_camera_output_polls_up_to_a_third_capture_within_one_tool_call(monkeypatch):
     class _WarmupConnection:
         def __init__(self):
             self.calls = []
@@ -235,7 +235,7 @@ def test_capture_camera_output_warms_up_and_retries_within_one_tool_call(monkeyp
         def send_command(self, command, params=None):
             self.calls.append((command, params))
             self.keys.append(idempotency_key_var.get())
-            if len(self.calls) == 1:
+            if len(self.calls) < 3:
                 return {
                     "status": "error",
                     "code": "CAMERA_FRAME_NOT_READY",
@@ -245,7 +245,8 @@ def test_capture_camera_output_warms_up_and_retries_within_one_tool_call(monkeyp
 
     mcp = _MCP()
     connection = _WarmupConnection()
-    monkeypatch.setattr("isaac_mcp.tools.sensors.time.sleep", lambda seconds: None)
+    sleeps = []
+    monkeypatch.setattr("isaac_mcp.tools.sensors.time.sleep", sleeps.append)
     register_tools(mcp, lambda: connection)
     context_token = idempotency_key_var.set("camera-request")
     try:
@@ -259,17 +260,20 @@ def test_capture_camera_output_warms_up_and_retries_within_one_tool_call(monkeyp
         idempotency_key_var.reset(context_token)
 
     assert isinstance(response, NativeImageResponse)
-    assert len(connection.calls) == 2
-    assert connection.calls[0] == connection.calls[1]
-    assert connection.keys == [None, None]
+    assert len(connection.calls) == 3
+    assert connection.calls[0] == connection.calls[1] == connection.calls[2]
+    assert connection.keys == [None, None, None]
+    assert sleeps == [0.5, 0.5]
     assert response.response["camera_warmup"] == {
         "attempted": True,
-        "capture_attempts": 2,
+        "capture_attempts": 3,
+        "max_capture_attempts": 3,
         "delay_ms": 500,
+        "total_wait_ms": 1000,
     }
 
 
-def test_capture_image_retries_at_most_once_when_frame_remains_unavailable(monkeypatch):
+def test_capture_image_stops_after_three_attempts_when_frame_remains_unavailable(monkeypatch):
     mcp = _MCP()
     connection = _Connection()
     response = {
@@ -285,10 +289,12 @@ def test_capture_image_retries_at_most_once_when_frame_remains_unavailable(monke
     assert result["status"] == "error"
     assert result["camera_warmup"] == {
         "attempted": True,
-        "capture_attempts": 2,
+        "capture_attempts": 3,
+        "max_capture_attempts": 3,
         "delay_ms": 500,
+        "total_wait_ms": 1000,
     }
-    assert len(connection.calls) == 2
+    assert len(connection.calls) == 3
 
 
 def test_capture_camera_output_forwards_typed_annotator_arguments():

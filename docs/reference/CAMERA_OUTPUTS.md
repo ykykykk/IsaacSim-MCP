@@ -34,7 +34,7 @@ capture_camera_output(
 )
 ```
 
-MCP schema 將 `return_mode` 公開為 `metadata | artifact | inline | image` enum。收到 `CAMERA_FRAME_NOT_READY` 時，MCP Server 會保留同一 camera prim、等待 500 ms，並在同一個 tool call 內自動重試一次。第二次仍未準備時才把錯誤回給 caller，不會無限重試。V5 或缺少 annotator 的 runtime 回 `CAMERA_OUTPUT_UNSUPPORTED`。
+MCP schema 將 `return_mode` 公開為 `metadata | artifact | inline | image` enum。收到 `CAMERA_FRAME_NOT_READY` 時，MCP Server 會保留同一 camera prim，在同一個 tool call 內最多執行 3 次 capture；兩次 retry 各等待 500 ms，總 warm-up wait 上限 1 秒。正常 ready frame 直接回傳，第 3 次仍未準備才把錯誤回給 caller。V5 或缺少 annotator 的 runtime 回 `CAMERA_OUTPUT_UNSUPPORTED`。
 
 ## Calibration
 

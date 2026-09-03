@@ -1,0 +1,42 @@
+{
+  "test": "02 Franka Panda 夾取方塊測試",
+  "overall_result": "FAIL",
+  "target_position": [
+    -0.25,
+    0.18,
+    0.525
+  ],
+  "scene_created": true,
+  "robot_loaded": true,
+  "cube_initial": [
+    0.25,
+    0.18,
+    0.525
+  ],
+  "finger_drive_fix": "PASS; both actual ~=0.04 m after 120 frames",
+  "fatal_failures": [
+    {
+      "stage": "set_gripper_width",
+      "expected": "open gripper 0.08m",
+      "actual": "MCP_TOOL_ERROR: Object of type function is not JSON serializable",
+      "likely_cause": "MCP tool serialization",
+      "correction": "set_joint_command on finger joints",
+      "reverification": "PASS for opening only"
+    },
+    {
+      "stage": "compute_ik",
+      "expected": "IK solution to pose above cube",
+      "actual": "MCP_TOOL_ERROR: Object of type function is not JSON serializable",
+      "likely_cause": "MCP tool serialization",
+      "correction": "no safe high-level IK fallback used for benchmark",
+      "reverification": "FAIL"
+    }
+  ],
+  "task_goal_reached": false,
+  "files": [
+    "test02_franka_pick_place.usd",
+    "test02_front.png",
+    "test02_rightfront.png",
+    "test02_detail.png"
+  ]
+}

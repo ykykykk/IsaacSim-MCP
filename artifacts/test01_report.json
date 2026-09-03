@@ -1,0 +1,83 @@
+{
+  "test": "01 基礎 Spawn / Transform / Camera 完整性測試",
+  "overall_result": "PASS",
+  "scene_created": true,
+  "required_objects_present": true,
+  "physics": {
+    "stable_after_180_frames": true,
+    "penetration_observed": false,
+    "velocities_zero": true
+  },
+  "actual_positions": {
+    "RedCube": [
+      -0.3000011742,
+      -1.499e-06,
+      0.1599999964
+    ],
+    "GreenCube": [
+      -1.1659e-06,
+      -1.4986e-06,
+      0.1799999923
+    ],
+    "BlueCube": [
+      0.2999988496,
+      -1.4923e-06,
+      0.200000003
+    ]
+  },
+  "cameras": {
+    "front": "PASS",
+    "right_front_top": "PASS",
+    "detail": "PASS; Green bbox height=0.679, width=0.383"
+  },
+  "failures": [
+    {
+      "stage": "configure platform collider approximation",
+      "expected": "static collider",
+      "actual": "INVALID_PHYSICS_BODY: approximation only on Mesh",
+      "correction": "removed approximation",
+      "reverification": "PASS"
+    },
+    {
+      "stage": "first camera capture",
+      "expected": "RGB frame",
+      "actual": "No frame available",
+      "correction": "retry after render request",
+      "reverification": "PASS"
+    },
+    {
+      "stage": "image output directory",
+      "expected": "save PNG",
+      "actual": "INVALID_OUTPUT_PATH",
+      "correction": "created F:/IsaacSim-MCP/artifacts",
+      "reverification": "PASS"
+    },
+    {
+      "stage": "visual color proof",
+      "expected": "red/green/blue visible",
+      "actual": "initial captures grayscale",
+      "correction": "created/bound explicit PBR materials",
+      "reverification": "PASS"
+    },
+    {
+      "stage": "detail camera",
+      "expected": "Green occupies 50-70%",
+      "actual": "not visible/then clipped",
+      "correction": "move camera, clipping range 0.01-100m, focal length 31mm",
+      "reverification": "PASS"
+    },
+    {
+      "stage": "save stage",
+      "expected": "actual save",
+      "actual": "scratch_stage required then preview-only",
+      "correction": "scratch_stage=true, preview=false",
+      "reverification": "PASS"
+    }
+  ],
+  "files": [
+    "test01_spawn_transform_camera.usd",
+    "test01_front_v2.png",
+    "test01_rightfront_v2.png",
+    "test01_detail_pass2.png"
+  ]
+}

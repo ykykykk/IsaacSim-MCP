@@ -27,7 +27,7 @@
 | `INLINE_SIZE_LIMIT_EXCEEDED` | Camera/LiDAR inline payload 超過 caller limit。 | 否 | 否 | 可選 | 改 `artifact` 或 `chunk` mode | 否 |
 | `MCP_IMAGE_CONTENT_INVALID` | MCP Server 收到的 inline PNG 未通過 base64、size、MIME 或 SHA-256 驗證。 | 否 | 可選 | 否 | 保留 artifact，檢查 server/extension 版本與 transport 完整性 | 不適用 |
 | `CAMERA_IMAGE_CONTENT_UNSUPPORTED` | `return_mode=image` 用於非 RGB typed camera output。 | 否 | 否 | 否 | 改用 RGB，或對 typed array 使用 `artifact`／`inline` | 不適用 |
-| `CAMERA_FRAME_NOT_READY` | Camera 已存在，但 RTX frame 尚未完成。MCP Camera tools 已在單次呼叫內等待並重試一次。 | new bounded attempt | 否 | 可選 | 檢查 timeline/render runtime | 不適用 |
+| `CAMERA_FRAME_NOT_READY` | Camera 已存在，但 RTX frame 在最多 3 次 capture 與 1 秒 warm-up wait 後仍未完成。 | new bounded attempt | 否 | 可選 | 檢查 timeline/render runtime | 不適用 |
 | `LIDAR_FRAME_NOT_READY` | LiDAR 已存在，但本 frame 尚無有效資料。 | bounded | 否 | 可選 | render/update 後再讀 | 不適用 |
 | `INVALID_*`、`*_REQUIRED` | Input schema、path、metadata 或參數無效。 | 否 | 否 | 可選 | 修正 request | 是 |
 | `*_NOT_FOUND` | 目標不存在，或 runtime view 尚未建立。 | 否 | 否 | 可選 | 重新 discover/list，修正 path | 是 |

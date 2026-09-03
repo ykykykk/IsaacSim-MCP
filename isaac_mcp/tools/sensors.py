@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 
 
 CAMERA_WARMUP_RETRY_DELAY_SECONDS = 0.5
+CAMERA_WARMUP_MAX_CAPTURE_ATTEMPTS = 3
 CameraReturnMode = Literal["metadata", "artifact", "inline", "image"]
 
 
@@ -53,12 +54,18 @@ def _camera_frame_not_ready(result: Mapping[str, Any]) -> bool:
     return "no frame available" in message or "no rgb frame available" in message
 
 
-def _with_camera_warmup_evidence(result: Mapping[str, Any]) -> Mapping[str, Any]:
+def _with_camera_warmup_evidence(
+    result: Mapping[str, Any],
+    capture_attempts: int,
+) -> Mapping[str, Any]:
     annotated = dict(result)
+    delay_ms = round(CAMERA_WARMUP_RETRY_DELAY_SECONDS * 1000)
     evidence = {
         "attempted": True,
-        "capture_attempts": 2,
-        "delay_ms": round(CAMERA_WARMUP_RETRY_DELAY_SECONDS * 1000),
+        "capture_attempts": capture_attempts,
+        "max_capture_attempts": CAMERA_WARMUP_MAX_CAPTURE_ATTEMPTS,
+        "delay_ms": delay_ms,
+        "total_wait_ms": delay_ms * (capture_attempts - 1),
     }
     data = result.get("data")
     if isinstance(data, Mapping):
@@ -75,19 +82,27 @@ def _capture_with_warmup_retry(
     command: str,
     params: Dict[str, Any],
 ) -> Mapping[str, Any]:
-    """Capture once, allow one Kit render tick, then retry one time if needed.
+    """Poll a bounded number of times while Kit produces an RTX frame.
 
     Camera capture is a time-dependent observation. Suppress inherited
-    idempotency caching for both attempts so a transient not-ready response is
-    not replayed in place of the rendered frame.
+    idempotency caching for all attempts so a transient not-ready response is
+    not replayed in place of the rendered frame. Normal ready captures return
+    after the first request without any warm-up delay.
     """
     token = idempotency_key_var.set(None)
     try:
-        result = connection.send_command(command, params)
-        if not _camera_frame_not_ready(result):
-            return result
-        time.sleep(CAMERA_WARMUP_RETRY_DELAY_SECONDS)
-        return _with_camera_warmup_evidence(connection.send_command(command, params))
+        result: Mapping[str, Any] = connection.send_command(command, params)
+        capture_attempts = 1
+        while (
+            _camera_frame_not_ready(result)
+            and capture_attempts < CAMERA_WARMUP_MAX_CAPTURE_ATTEMPTS
+        ):
+            time.sleep(CAMERA_WARMUP_RETRY_DELAY_SECONDS)
+            capture_attempts += 1
+            result = connection.send_command(command, params)
+        if capture_attempts > 1:
+            return _with_camera_warmup_evidence(result, capture_attempts)
+        return result
     finally:
         idempotency_key_var.reset(token)
 

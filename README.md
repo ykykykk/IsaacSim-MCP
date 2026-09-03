@@ -247,7 +247,7 @@ capture_camera_output(
 
 `return_mode="image"` 會回傳 schema 1.0 文字 metadata 與 MCP-native `ImageContent`。Server 會驗證 PNG base64、byte size 與 SHA-256，且不會把大型 base64 重複放進文字 metadata。`artifact` 仍是預設模式，因此既有 Codex／Claude stdio 與下載流程不變。Client 是否在 UI 顯示圖片、把圖片交給 vision model，取決於該 client 對 MCP image content 的支援；要宣稱 ChatGPT 可見，必須完成實際 Connector acceptance，不能只依 server unit test 推論。
 
-`capture_image` 與 `capture_camera_output` 的 MCP input schema 會把 `return_mode` 公開為 `metadata | artifact | inline | image` enum，Agent 不需要從說明文字猜測。Camera 新建或解析度變更後若第一個 RTX read 回 `CAMERA_FRAME_NOT_READY`，MCP Server 會等待一次 render tick 並自動重試一次；一次 tool call 即可完成 `Render → Capture → ImageContent`。若第二次仍未取得 frame，錯誤會原樣回傳，不會無限重試。
+`capture_image` 與 `capture_camera_output` 的 MCP input schema 會把 `return_mode` 公開為 `metadata | artifact | inline | image` enum，Agent 不需要從說明文字猜測。Camera 新建或解析度變更後若 RTX read 回 `CAMERA_FRAME_NOT_READY`，MCP Server 會在同一個 tool call 內做 bounded polling：最多 3 次 capture、兩段 500 ms wait，總 warm-up wait 上限 1 秒。正常 ready frame 不會額外等待；第 3 次仍未取得 frame 才回傳錯誤。
 
 IsaacSim-MCP 目前沒有 HTTP authentication。`MCP_ALLOWED_HOSTS` 只防止不受信任的 Host header，不是身分驗證。公開 Funnel 會讓任何能連到該 URL 的人嘗試呼叫 MCP tools，可能控制本機 Isaac Sim。只在你接受這個風險時啟用，使用完立即停止 Funnel；正式共享環境應在 MCP server 前加入 authentication、authorization 與存取稽核。
 
@@ -314,7 +314,7 @@ Funnel 可用，但本機 MCP Server 沒有在 Funnel 指向的 port listening�
 
 確認呼叫的是 RGB `capture_camera_output(..., return_mode="image")` 或 `capture_image(..., return_mode="image")`。`artifact` 只回 managed handle，`inline` 只把 base64 放進 JSON；兩者都不是 MCP-native image content。若 response 已含 `ImageContent`，但 UI 仍無圖片，代表目前 client 沒有渲染或轉交該 content block；保留 artifact handle 作為下載路徑，並把結果標記為 client-side partial support。
 
-若 response 是 `CAMERA_FRAME_NOT_READY`，代表 Server 已完成一次 bounded warm-up retry，但第二次 RTX read 仍未準備。確認 Camera prim、timeline 與 render runtime 正常，再建立新的 capture attempt；不要在單次 request 內無限重播。
+若 response 是 `CAMERA_FRAME_NOT_READY`，代表 Server 已用完最多 3 次 capture 與 1 秒 warm-up wait。確認 Camera prim、timeline 與 render runtime 正常，再建立新的 capture attempt；不要在單次 request 內無限重播。
 
 ### ChatGPT 顯示 legacy tools，但呼叫回 `Unknown tool`
 

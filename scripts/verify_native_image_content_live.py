@@ -117,13 +117,13 @@ async def _verify_session(session: ClientSession) -> dict[str, Any]:
                 "prim_path": camera_path,
                 "position": [3.0, 3.0, 2.0],
                 "rotation": [65.0, 0.0, 135.0],
-                "resolution": [640, 360],
+                "resolution": [1280, 720],
             },
         )
         assert resized["status"] == "success", resized
 
         # Deliberately make exactly one public MCP call after the resolution
-        # transition. The server owns the bounded frame warm-up and one retry.
+        # transition. The server owns the bounded frame readiness polling.
         result = await session.call_tool(
             "capture_camera_output",
             {
@@ -147,8 +147,12 @@ async def _verify_session(session: ClientSession) -> dict[str, Any]:
         assert "data" not in inline
         assert inline["size_bytes"] == len(png)
         assert inline["sha256"] == hashlib.sha256(png).hexdigest()
-        assert [height, width, channels] == envelope["data"]["image"]["shape"] == [360, 640, 3]
-        assert warmup == {"attempted": True, "capture_attempts": 2, "delay_ms": 500}
+        assert [height, width, channels] == envelope["data"]["image"]["shape"] == [720, 1280, 3]
+        assert warmup["attempted"] is True
+        assert 2 <= warmup["capture_attempts"] <= 3
+        assert warmup["max_capture_attempts"] == 3
+        assert warmup["delay_ms"] == 500
+        assert warmup["total_wait_ms"] == 500 * (warmup["capture_attempts"] - 1)
         assert any(pixels), "captured RGB image is entirely black"
         assert result.structuredContent == {
             "result": next(item.text for item in result.content if isinstance(item, TextContent))
@@ -166,7 +170,7 @@ async def _verify_session(session: ClientSession) -> dict[str, Any]:
             "metadata_contains_base64": False,
             "nonzero_rgb_bytes": sum(value != 0 for value in pixels),
             "schema_return_mode_enum": ["metadata", "artifact", "inline", "image"],
-            "resolution_transition": [[160, 90], [640, 360]],
+            "resolution_transition": [[160, 90], [1280, 720]],
             "public_capture_calls": 1,
             "camera_warmup": warmup,
         }

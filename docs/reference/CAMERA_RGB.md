@@ -86,17 +86,17 @@ MCP Server 會把 `image` 轉為 Extension 的 bounded `inline` capture，驗證
 
 ## Render warm-up
 
-Camera 新建或解析度變更後，第一個 RTX read 可能只排入 render request 並回 `CAMERA_FRAME_NOT_READY`。MCP Server 會等待 500 ms，接著在同一個 tool call 內自動重試一次：
+Camera 新建或解析度變更後，前兩個 RTX read 可能只排入或等待 render request，並回 `CAMERA_FRAME_NOT_READY`。MCP Server 會在同一個 tool call 內做 bounded polling：最多 3 次 capture、兩段 500 ms wait，總 warm-up wait 上限 1 秒：
 
 ```text
 capture_camera_output(return_mode="image")
   → first read
   → CAMERA_FRAME_NOT_READY
   → bounded render wait
-  → one retry
+  → up to two retries
   → TextContent + ImageContent
 ```
 
-Camera capture 是 time-dependent observation，這兩個內部 read 不使用 Extension idempotency cache，外層 MCP command context 會在完成後還原。發生 retry 時，response `data.camera_warmup` 會記錄 `attempted=true`、`capture_attempts=2` 與 `delay_ms=500`。第二次仍未取得 frame 時，Server 會回傳該錯誤，不會無限等待或重試。Extension handler 只負責排入 asynchronous render request，不會同步 pump Kit event loop。
+Camera capture 是 time-dependent observation，所有內部 read 都不使用 Extension idempotency cache，外層 MCP command context 會在完成後還原。發生 polling 時，response `data.camera_warmup` 會記錄 `attempted=true`、實際 `capture_attempts`、`max_capture_attempts=3`、`delay_ms=500` 與 `total_wait_ms`。第 3 次仍未取得 frame 時，Server 會回傳該錯誤，不會無限等待或重試。Extension handler 只負責排入 asynchronous render request，不會同步 pump Kit event loop。
 
-`scripts/verify_native_image_content_live.py` 會在唯一 scratch namespace 建立 Cube、DistantLight 與 Camera，執行 `160×90 → 640×360` resolution transition，接著以單次 MCP tool call 驗證 bounded warm-up、`TextContent`、`ImageContent`、PNG decode、size/SHA-256、非黑 RGB pixels、metadata 無重複 base64，最後釋放 Camera、刪除 scratch root 並還原 timeline state。預設測 stdio；設定 `ISAAC_MCP_VERIFIER_URL=http://127.0.0.1:8000/mcp` 時改測已啟動的 Streamable HTTP endpoint。
+`scripts/verify_native_image_content_live.py` 會在唯一 scratch namespace 建立 Cube、DistantLight 與 Camera，執行 `160×90 → 1280×720` resolution transition，接著以單次 MCP tool call 驗證 bounded polling、`TextContent`、`ImageContent`、PNG decode、size/SHA-256、非黑 RGB pixels、metadata 無重複 base64，最後釋放 Camera、刪除 scratch root 並還原 timeline state。預設測 stdio；設定 `ISAAC_MCP_VERIFIER_URL=http://127.0.0.1:8000/mcp` 時改測已啟動的 Streamable HTTP endpoint。

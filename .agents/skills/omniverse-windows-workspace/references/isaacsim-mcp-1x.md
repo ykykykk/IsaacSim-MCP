@@ -37,9 +37,10 @@ renderer multi-GPU setting as a substitute.
   vision forwarding remain separate live acceptance checks.
 - The public input schema exposes `return_mode` as the exact
   `metadata|artifact|inline|image` enum. On `CAMERA_FRAME_NOT_READY`, the MCP
-  Server waits 500 ms and retries one read inside the same tool call. It does
-  not synchronously pump Kit, cache the transient observation under an
-  idempotency key, or retry more than once.
+  Server performs at most three captures with two 500 ms waits inside the same
+  tool call. Ready frames return without delay. It does not synchronously pump
+  Kit, cache transient observations under an idempotency key, or exceed the
+  one-second warm-up wait budget.
 - A valid hash or a black empty-stage PNG is insufficient live evidence. Use
   visible geometry and lighting, Play/warm-up, Stop, read-back, post-Stop Kit
   updates, process state, and native-dump/log evidence.
