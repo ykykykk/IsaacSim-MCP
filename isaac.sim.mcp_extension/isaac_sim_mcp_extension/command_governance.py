@@ -90,6 +90,8 @@ def attach_command_metadata(
             if status == "success"
             else "partial"
             if status == "partial"
+            else "unknown"
+            if command_type == "humans.spawn" and data.get("side_effects_unknown") is True
             else "not_applied"
             if status in {"error", "unsupported", "timeout", "cancelled"}
             else "unknown"

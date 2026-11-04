@@ -26,6 +26,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
         The profile validates exact joint names and types before applying any
         position target. width_m is the total distance between both fingers.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            profile: Exact supported controller profile name.
+            width_m: Requested gripper opening width in meters.
         """
         return send(
             "controllers.set_gripper_width",
@@ -38,7 +43,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("open_gripper")
     def open_gripper(prim_path: str, profile: str) -> str:
-        """Open a gripper to the profile's declared open width with immediate target read-back."""
+        """Open a gripper to the profile's declared open width with immediate target read-back.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            profile: Exact supported controller profile name.
+        """
         return send(
             "controllers.open_gripper",
             {
@@ -49,7 +59,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("close_gripper")
     def close_gripper(prim_path: str, profile: str) -> str:
-        """Close a gripper to the profile's declared closed width with immediate target read-back."""
+        """Close a gripper to the profile's declared closed width with immediate target read-back.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            profile: Exact supported controller profile name.
+        """
         return send(
             "controllers.close_gripper",
             {
@@ -71,6 +86,13 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         The timeline must be playing for a non-zero command. Targets persist
         until replaced, so always call stop_mobile_base at the end of motion.
         Differential profiles reject non-zero lateral velocity.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            profile: Exact supported controller profile name.
+            forward_mps: Forward base velocity in meters per second.
+            lateral_mps: Lateral base velocity in meters per second.
+            yaw_radps: Base yaw rate in radians per second.
         """
         return send(
             "controllers.set_mobile_base_velocity",
@@ -85,7 +107,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("stop_mobile_base")
     def stop_mobile_base(prim_path: str, profile: str) -> str:
-        """Set every profiled wheel velocity target to zero and verify the stop target read-back."""
+        """Set every profiled wheel velocity target to zero and verify the stop target read-back.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            profile: Exact supported controller profile name.
+        """
         return send(
             "controllers.stop_mobile_base",
             {

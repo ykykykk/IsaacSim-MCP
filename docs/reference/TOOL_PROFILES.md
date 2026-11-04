@@ -4,9 +4,9 @@
 
 | Profile | Public tools | 用途 |
 |---|---:|---|
-| `legacy` | 129 | 預設；完整保留既有 Codex、Claude Desktop 與其他 client 設定。 |
-| `consolidated` | 98 | 對話導向的精簡 action space；同一資源的讀寫或控制操作以 discriminator 合併。 |
-| `full` | 151 | 同時公開新舊名稱；只供 migration、contract test 與 client 更新。 |
+| `legacy` | source-derived | 預設；完整保留既有 Codex、Claude Desktop 與其他 client 設定。 |
+| `consolidated` | source-derived | 對話導向的精簡 action space；同一資源的讀寫或控制操作以 discriminator 合併。 |
+| `full` | source-derived | 同時公開新舊名稱；只供 migration、contract test 與 client 更新。 |
 
 設定範例：
 
@@ -25,9 +25,9 @@ $env:ISAAC_MCP_TOOL_PROFILE = "consolidated"
 
 | Active profile | `public_tool_count` | Probe tools |
 |---|---:|---|
-| `legacy` | 129 | 有 `play_simulation`、`open_gripper`；沒有 `control_timeline`、`control_gripper`。 |
-| `consolidated` | 98 | 有 `control_timeline`、`control_gripper`；沒有 `play_simulation`、`open_gripper`。 |
-| `full` | 151 | 新舊名稱都存在，只供 migration 與 contract verification。 |
+| `legacy` | source-derived | 有 `play_simulation`、`open_gripper`；沒有 `control_timeline`、`control_gripper`。 |
+| `consolidated` | source-derived | 有 `control_timeline`、`control_gripper`；沒有 `play_simulation`、`open_gripper`。 |
+| `full` | source-derived | 新舊名稱都存在，只供 migration 與 contract verification。 |
 
 若 client 顯示 legacy 名稱，但 active endpoint 回報 `consolidated` 並對 legacy call 回 `Unknown tool`，代表 client 保存了舊 tool schema，或 public URL 指向另一個 server instance。先核對 public endpoint 的 `tools/list`，再重新連線並讓 connector 重新 discovery。短期 migration 可使用 `full`；完成更新後應回到選定的 production profile。
 

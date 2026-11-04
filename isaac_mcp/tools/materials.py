@@ -78,7 +78,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_material")
     def get_material(material_path: str) -> str:
-        """Read PBR or physics material parameters and explicit units."""
+        """Read PBR or physics material parameters and explicit units.
+
+        Args:
+            material_path: Absolute USD path of the material Prim.
+        """
         try:
             result = get_connection().send_command("materials.get", {"material_path": material_path})
             return json.dumps(result, indent=2)
@@ -110,7 +114,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_material_binding")
     def get_material_binding(target_prim_path: str, material_purpose: str = "physics") -> str:
-        """Read the resolved physics or visual material binding on a prim."""
+        """Read the resolved physics or visual material binding on a prim.
+
+        Args:
+            target_prim_path: USD Prim path whose material binding is queried.
+            material_purpose: Material binding purpose to query.
+        """
         try:
             result = get_connection().send_command(
                 "materials.get_binding",

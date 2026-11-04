@@ -437,6 +437,60 @@ class PhysicsRuntime:
                 rollback_succeeded = False
             raise PhysicsParamsApplyError(str(exc), rollback_succeeded=rollback_succeeded) from exc
 
+    def get_physics_params(self) -> Dict[str, Any]:
+        """Read one existing PhysX scene without creating or selecting a scene."""
+        if self._engine != "physx":
+            self.require_backend_capability("physics.gpu_enabled")
+        import carb
+        from isaacsim.core.simulation_manager import SimulationManager
+        from pxr import PhysxSchema, UsdPhysics
+
+        stage = self.get_stage()
+        scene_paths = [prim.GetPath().pathString for prim in stage.Traverse() if prim.GetTypeName() == "PhysicsScene"]
+        if len(scene_paths) != 1:
+            raise RuntimeError(f"Expected exactly one existing PhysicsScene, found: {scene_paths}")
+        scene_path = scene_paths[0]
+        prim = stage.GetPrimAtPath(scene_path)
+        if not prim.HasAPI(PhysxSchema.PhysxSceneAPI):
+            raise RuntimeError(f"PhysicsScene lacks PhysxSceneAPI: {scene_path}")
+        runtime_scene = next(
+            (item for item in SimulationManager.get_physics_scenes() if str(getattr(item, "path", "")) == scene_path),
+            None,
+        )
+        required = ("get_dt", "get_enabled_gpu_dynamics", "get_broadphase_type")
+        if runtime_scene is None or not all(hasattr(runtime_scene, name) for name in required):
+            raise RuntimeError(f"No runtime PhysX scene read-back is available for {scene_path}")
+        usd_scene = UsdPhysics.Scene(prim)
+        physx_api = PhysxSchema.PhysxSceneAPI(prim)
+        direction = usd_scene.GetGravityDirectionAttr().Get()
+        magnitude = usd_scene.GetGravityMagnitudeAttr().Get()
+        gravity = None if direction is None or magnitude is None else [float(direction[i]) * float(magnitude) for i in range(3)]
+        steps = physx_api.GetTimeStepsPerSecondAttr().Get()
+        settings = carb.settings.get_settings()
+        return {
+            "scene_path": scene_path,
+            "backend": "physx",
+            "readback": {
+                "usd": {
+                    "gravity": gravity,
+                    "time_steps_per_second": int(steps) if steps is not None else None,
+                    "time_step": 1.0 / float(steps) if steps else None,
+                    "gpu_enabled": bool(physx_api.GetEnableGPUDynamicsAttr().Get()),
+                    "broadphase_type": str(physx_api.GetBroadphaseTypeAttr().Get()),
+                    "ccd_enabled": bool(physx_api.GetEnableCCDAttr().Get()),
+                },
+                "runtime": {
+                    "time_step": float(runtime_scene.get_dt()),
+                    "manager_time_step": float(SimulationManager.get_physics_dt(scene_path)),
+                    "default_scene_path": SimulationManager.get_default_physics_scene(),
+                    "stage_time_codes_per_second": float(stage.GetTimeCodesPerSecond()),
+                    "min_frame_rate": int(settings.get("/persistent/simulation/minFrameRate")),
+                    "gpu_enabled": bool(runtime_scene.get_enabled_gpu_dynamics()),
+                    "broadphase_type": str(runtime_scene.get_broadphase_type()),
+                },
+            },
+        }
+
     def configure_physics_body(
         self,
         prim_path: str,

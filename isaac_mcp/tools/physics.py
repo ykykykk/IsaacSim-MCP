@@ -33,6 +33,14 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         none, convex_hull, convex_decomposition, mesh_simplification,
         bounding_cube, or bounding_sphere. Mass uses kg and density uses kg/m^3.
         The timeline must be stopped.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            body_type: Body type: dynamic, kinematic, or static.
+            collider_enabled: Whether the body has an enabled collider.
+            approximation: Collider approximation; see the valid choices in the tool description.
+            mass_kg: Optional mass in kilograms.
+            density_kg_m3: Optional density in kilograms per cubic meter.
         """
         params = {"prim_path": prim_path, "body_type": body_type, "collider_enabled": collider_enabled}
         for key, value in (("approximation", approximation), ("mass_kg", mass_kg), ("density_kg_m3", density_kg_m3)):
@@ -42,7 +50,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_physics_body")
     def get_physics_body(prim_path: str) -> str:
-        """Read authored rigid body, collider, approximation, mass and density."""
+        """Read authored rigid body, collider, approximation, mass and density.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+        """
         return send("physics.get_body", {"prim_path": prim_path})
 
     @mcp.tool("create_collision_group")
@@ -53,7 +65,15 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         invert_filtered_groups: bool = False,
         merge_group_name: Optional[str] = None,
     ) -> str:
-        """Create a USD collision group and return relationship read-back."""
+        """Create a USD collision group and return relationship read-back.
+
+        Args:
+            group_path: Absolute USD path of the collision group.
+            collider_paths: USD Prim paths of collider members.
+            filtered_group_paths: Optional collision-group paths to filter.
+            invert_filtered_groups: Whether to invert the group filter.
+            merge_group_name: Optional name used to merge collision groups.
+        """
         params = {
             "group_path": group_path,
             "collider_paths": collider_paths,
@@ -67,7 +87,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_collision_group")
     def get_collision_group(group_path: str) -> str:
-        """Read collision group members, filters, inversion and merge name."""
+        """Read collision group members, filters, inversion and merge name.
+
+        Args:
+            group_path: Absolute USD path of the collision group.
+        """
         return send("physics.get_collision_group", {"group_path": group_path})
 
     @mcp.tool("create_physics_joint")
@@ -89,6 +113,20 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
         Positions and prismatic limits are meters; revolute limits are degrees.
         Quaternion rotations use [w, x, y, z]. Axis is X, Y, or Z.
+
+        Args:
+            joint_path: Absolute USD Prim path of the joint.
+            joint_type: Joint type: fixed, revolute, or prismatic.
+            body1: Second connected body Prim path.
+            body0: Optional first connected body Prim path.
+            axis: Joint axis X, Y, or Z when applicable.
+            lower_limit: Lower joint limit; meters for prismatic and degrees for revolute.
+            upper_limit: Upper joint limit; meters for prismatic and degrees for revolute.
+            local_position0: Joint frame position local to body0, in meters.
+            local_rotation0: Joint frame rotation local to body0 as quaternion [w, x, y, z].
+            local_position1: Joint frame position local to body1, in meters.
+            local_rotation1: Joint frame rotation local to body1 as quaternion [w, x, y, z].
+            collision_enabled: Whether the connected bodies may collide.
         """
         params = {
             "joint_path": joint_path,
@@ -112,5 +150,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_physics_joint")
     def get_physics_joint(joint_path: str) -> str:
-        """Read joint type, body targets, frames, axis, limits and units."""
+        """Read joint type, body targets, frames, axis, limits and units.
+
+        Args:
+            joint_path: Absolute USD Prim path of the joint.
+        """
         return send("physics.get_joint", {"joint_path": joint_path})

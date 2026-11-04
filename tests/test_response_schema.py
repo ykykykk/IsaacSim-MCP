@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import inspect
 import json
 
 from mcp.types import CallToolResult, ImageContent, TextContent
 
+from isaac_mcp.command_context import command_id_var
 from isaac_mcp.responses import NativeImageResponse, normalize_response
 from isaac_mcp.tool_inventory import tool_count
-from isaac_mcp.tools import _serialize_tool_response, register_all_tools
+from isaac_mcp.tools import _serialize_tool_response, _wrap_tool, register_all_tools
 
 REQUIRED_FIELDS = {
     "schema_version",
@@ -119,6 +121,55 @@ def test_schema_wrapper_returns_all_fields_for_success_and_legacy_error():
     assert set(timeout) == REQUIRED_FIELDS
     assert timeout["status"] == "timeout"
     assert timeout["code"] == "TIMEOUT"
+
+
+def test_schema_wrapper_preserves_caller_command_id_for_local_runtime_status():
+    mcp = _FakeMCP()
+    register_all_tools(mcp, lambda: _Connection())
+
+    response = json.loads(mcp.tools["get_runtime_status"](command_id="caller-runtime-status"))
+
+    assert response["command_id"] == "caller-runtime-status"
+
+
+def test_schema_wrapper_preserves_caller_command_id_across_outcomes_and_context():
+    def success():
+        return {"status": "success", "data": {"ok": True}}
+
+    def timeout():
+        raise TimeoutError("deadline")
+
+    def error():
+        raise ValueError("bad input")
+
+    async def cancelled():
+        raise asyncio.CancelledError()
+
+    cases = [
+        (_wrap_tool(success), "success"),
+        (_wrap_tool(timeout), "timeout"),
+        (_wrap_tool(error), "error"),
+    ]
+    for tool, expected_status in cases:
+        response = json.loads(tool(command_id=f"caller-{expected_status}"))
+        assert response["status"] == expected_status
+        assert response["command_id"] == f"caller-{expected_status}"
+        assert command_id_var.get() is None
+
+    cancelled_response = json.loads(asyncio.run(_wrap_tool(cancelled)(command_id="caller-cancelled")))
+    assert cancelled_response["status"] == "cancelled"
+    assert cancelled_response["command_id"] == "caller-cancelled"
+    assert command_id_var.get() is None
+
+
+def test_schema_wrapper_does_not_overwrite_downstream_command_id_mismatch():
+    def downstream():
+        return {"status": "success", "command_id": "downstream-id"}
+
+    response = json.loads(_wrap_tool(downstream)(command_id="caller-id"))
+
+    assert response["command_id"] == "downstream-id"
+    assert any("COMMAND_ID_MISMATCH" in warning for warning in response["warnings"])
 
 
 def test_schema_wrapper_preserves_envelope_when_returning_native_image_content():

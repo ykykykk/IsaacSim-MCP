@@ -50,6 +50,7 @@ def register(registry: Dict[str, Any], adapter: IsaacAdapterBase) -> None:
     registry["simulation.stop"] = lambda **p: stop(adapter, **p)
     registry["simulation.step"] = lambda **p: step(adapter, **p)
     registry["simulation.set_physics"] = lambda **p: set_physics(adapter, **p)
+    registry["simulation.get_physics_params"] = lambda **p: get_physics_params(adapter, **p)
     registry["simulation.execute_script"] = lambda **p: execute_script(adapter, **p)
     registry["simulation.get_script_policy"] = lambda **p: get_script_policy(**p)
     registry["simulation.get_script_audit"] = lambda **p: get_script_audit(**p)
@@ -211,6 +212,17 @@ def set_physics(
             "message": str(e),
             "applied": False,
         }
+
+
+def get_physics_params(adapter: IsaacAdapterBase) -> Dict[str, Any]:
+    """Return direct USD and runtime PhysX read-back without authoring anything."""
+    try:
+        result = adapter.get_physics_params()
+        return {"status": "success", "code": "PHYSICS_PARAMS_READ", "data": result, "readback": result.get("readback")}
+    except NotImplementedError as exc:
+        return {"status": "unsupported", "code": "PHYSICS_PARAMS_UNSUPPORTED", "message": str(exc)}
+    except Exception as exc:
+        return {"status": "error", "code": "PHYSICS_PARAMS_READ_FAILED", "message": str(exc)}
 
 
 def execute_script(

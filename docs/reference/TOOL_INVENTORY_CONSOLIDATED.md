@@ -4,7 +4,7 @@
 
 Package version：`0.6.0`
 Tool profile：`consolidated`
-Source-derived tool count：`98`
+Source-derived tool count：`99`
 
 | Module | 數量 | Named tools |
 |---|---:|---|
@@ -23,6 +23,6 @@ Source-derived tool count：`98`
 | `ros2` | 3 | `delete_ros2_workflow`, `get_ros2_status`, `list_ros2_workflows` |
 | `scene` | 13 | `apply_stage_batch`, `clear_scene`, `create_physics_scene`, `edit_composition_arc`, `edit_sublayer`, `get_scene_info`, `get_stage_composition`, `list_environments`, `load_environment`, `new_stage`, `open_stage`, `save_stage_as`, `set_variant_selection` |
 | `sensors` | 7 | `capture_camera_output`, `create_camera`, `create_lidar`, `delete_sensor`, `get_camera_calibration`, `get_lidar_config`, `get_lidar_point_cloud` |
-| `simulation` | 10 | `execute_script`, `get_isaac_logs`, `get_joint_config`, `get_physics_state`, `get_script_audit_log`, `get_script_policy`, `get_simulation_state`, `reload_script`, `set_physics_params`, `step_simulation` |
+| `simulation` | 11 | `execute_script`, `get_isaac_logs`, `get_joint_config`, `get_physics_params`, `get_physics_state`, `get_script_audit_log`, `get_script_policy`, `get_simulation_state`, `reload_script`, `set_physics_params`, `step_simulation` |
 
 這份 inventory 證明 source 的 registration intent。目前 runtime support、backend state 與 prerequisites 以 `get_capabilities` 為準；live success 必須有 guarded read-back evidence。

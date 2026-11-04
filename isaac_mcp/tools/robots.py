@@ -98,7 +98,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
         Call this after create_robot to understand the robot's kinematic structure.
         Returns joint names ordered by DOF index, joint types (revolute/prismatic),
-        and joint limits (degrees for revolute, meters for prismatic).
+        and joint limits. Inspect the units reported for each joint. Some
+        unbounded limits may be emitted as non-standard Infinity tokens, which
+        strict JSON parsers cannot decode.
 
         Args:
             prim_path: The prim path of the robot.

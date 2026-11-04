@@ -74,7 +74,7 @@ Server 會先驗證 base64、declared size 與 SHA-256。驗證失敗回 `MCP_IM
 - `ISAAC_RUNTIME_CRASHED`：Isaac Sim 異常退出且 bounded restart budget 已用盡。
 - `ISAAC_RUNTIME_UNAVAILABLE`：Extension protocol health 不可用，且沒有進行中的 recovery。
 
-Runtime transport errors 會在 `data.runtime` 附上 bounded supervisor evidence。`get_runtime_status` 不依賴 Extension socket，可在 `8766` 關閉時回傳 state、exit code、restart count、health 與 recovery actions。若 connection loss 發生於送出 write 之後，`command_delivery=unknown` 表示不得自動 replay；runtime 恢復後必須先 read-back。
+Runtime transport errors 會在 `data.runtime` 附上 bounded supervisor evidence。`get_runtime_status` 不依賴 Extension socket，可在 `8766` 關閉時回傳 state、exit code、restart count、health、recovery actions，以及 `diagnostics`／`last_crash.diagnostics` 中已去重與 credential redaction 的 Kit log crash signature。Kit log 最多掃描尾端 1 MiB、最多回傳 24 筆診斷行，不會把完整 log 放進 response。若 connection loss 發生於送出 write 之後，`command_delivery=unknown` 表示不得自動 replay；runtime 恢復後必須先 read-back。
 
 rolling upgrade 期間，MCP Server 仍可接收舊 extension 的 `{status, result}` response，並在回給 client 前轉成 schema 1.0。
 

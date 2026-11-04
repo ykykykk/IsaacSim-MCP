@@ -31,9 +31,23 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
     ) -> str:
         """Solve bounded Lula inverse kinematics without moving the robot.
 
-        Quaternion order is scalar-first [w, x, y, z]. The explicit warm-start
+        Quaternion order is scalar-first [w, x, y, z]. The robot model and its joint
+        names and end-effector frame must match the articulation. The explicit warm-start
         and random seed make repeated requests reproducible. The result reports
         achieved end-effector errors and whether collision checking was done.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            target_position: Target position as [x, y, z].
+            end_effector_frame: End-effector frame name used by the selected robot model.
+            target_orientation: Optional target orientation as quaternion [w, x, y, z].
+            seed_joint_positions: Optional joint-position seed in model joint order.
+            random_seed: Seed for randomized solver or planner operations.
+            position_tolerance: Allowed end-effector position error.
+            orientation_tolerance: Allowed end-effector orientation error.
+            max_iterations: Maximum solver or planner iterations.
+            timeout_ms: Time limit in milliseconds.
+            robot_model: Robot model whose joint names and frames must match the articulation.
         """
         return send(
             "motion.compute_ik",
@@ -65,10 +79,21 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
     ) -> str:
         """Plan a bounded joint trajectory and return an opaque trajectory_id.
 
+        The model and its joint names must match the target articulation.
         planner="rrt" uses NVIDIA Lula RRT and reports collision_checked=true;
         planner="cspace" creates a deterministic spline and explicitly reports
         collision_checked=false. start_joint_positions defaults to measured state;
         pass it explicitly for reproducible offline planning. This call never executes.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            goal_joint_positions: Goal joint positions in the selected model joint order.
+            start_joint_positions: Optional start joint positions; omitted uses measured state.
+            planner: Planner selection: rrt or cspace.
+            random_seed: Seed for randomized solver or planner operations.
+            max_iterations: Maximum solver or planner iterations.
+            timeout_ms: Time limit in milliseconds.
+            robot_model: Robot model whose joint names and frames must match the articulation.
         """
         return send(
             "motion.plan_joint_trajectory",
@@ -86,7 +111,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("execute_trajectory")
     def execute_trajectory(trajectory_id: str, timeout_ms: int = 30000) -> str:
-        """Start a trajectory job and return immediately without blocking the MCP worker."""
+        """Start a trajectory job and return immediately without blocking the MCP worker.
+
+        Args:
+            trajectory_id: Opaque trajectory ID returned by trajectory planning.
+            timeout_ms: Time limit in milliseconds.
+        """
         return send(
             "motion.execute_trajectory",
             {
@@ -97,7 +127,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("cancel_motion")
     def cancel_motion(job_id: str) -> str:
-        """Cancel a running motion job and hold its last commanded position."""
+        """Cancel a running motion job and hold its last commanded position.
+
+        Args:
+            job_id: Opaque ID of the job returned by its creation or start operation.
+        """
         return send(
             "motion.cancel",
             {
@@ -107,7 +141,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_motion_status")
     def get_motion_status(job_id: str) -> str:
-        """Read motion job state, progress, timing, and terminal error details."""
+        """Read motion job state, progress, timing, and terminal error details.
+
+        Args:
+            job_id: Opaque ID of the job returned by its creation or start operation.
+        """
         return send(
             "motion.get_status",
             {

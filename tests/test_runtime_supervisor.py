@@ -51,12 +51,24 @@ def test_nonzero_exit_restarts_and_preserves_last_crash(tmp_path):
         health_probe=lambda **_kwargs: health.popleft(),
         sleep=lambda _seconds: None,
         write_state=lambda _path, state: states.append(state.copy()),
+        diagnostics_reader=lambda: {
+            "available": True,
+            "crash_detected": True,
+            "primary_signature": "ACCESS_VIOLATION",
+            "diagnostic_lines": ["[crash] access violation"],
+        },
     )
 
     assert result == 0
     assert [state["state"] for state in states].count("restart_backoff") == 1
     assert states[-1]["state"] == "stopped"
     assert states[-1]["last_crash"]["exit_code"] == 23
+    assert states[-1]["last_crash"]["diagnostics"]["primary_signature"] == "ACCESS_VIOLATION"
+    ready_state = next(state for state in states if state["state"] == "ready")
+    assert ready_state["runtime_pid"] == ready_state["launcher_pid"]
+    assert ready_state["runtime_pid_provenance"] == "legacy_alias_of_launcher_pid"
+    assert ready_state["kit_pid"] is None
+    assert ready_state["kit_pid_provenance"] == "unknown_not_exposed_by_system.get_capabilities"
     assert states[-1]["restart_count"] == 1
 
 

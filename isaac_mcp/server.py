@@ -181,9 +181,21 @@ def _transport_security_settings() -> TransportSecuritySettings:
 def _create_mcp() -> FastMCP:
     """Create the MCP server with Streamable HTTP settings from the environment."""
     profile = resolve_tool_profile()
+    instructions = _INSTRUCTIONS
+    if profile == "consolidated":
+        for old, new in (
+            ("get_prim_info", "query_prim(action=get)"),
+            ("set_joint_positions", "set_joint_command(mode=position)"),
+            ("get_joint_positions", "get_joint_state"),
+            ("play_simulation", "control_timeline(action=play)"),
+            ("stop_simulation", "control_timeline(action=stop)"),
+            ("list_available_robots", "robot_library(action=list)"),
+        ):
+            instructions = instructions.replace(old, new)
+        instructions += _CONSOLIDATED_INSTRUCTIONS
     return FastMCP(
         "IsaacSimMCP",
-        instructions=_INSTRUCTIONS + (_CONSOLIDATED_INSTRUCTIONS if profile == "consolidated" else ""),
+        instructions=instructions,
         lifespan=server_lifespan,
         host=os.getenv("ISAAC_MCP_HTTP_HOST", "127.0.0.1"),
         port=int(os.getenv("ISAAC_MCP_HTTP_PORT", "8000")),

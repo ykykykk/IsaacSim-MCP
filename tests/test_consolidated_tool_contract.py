@@ -166,6 +166,29 @@ def test_required_branch_argument_returns_clear_error(monkeypatch) -> None:
     assert connection.calls == []
 
 
+def test_action_aware_branches_reject_blank_or_empty_configuration(monkeypatch) -> None:
+    tools, connection = _tools(monkeypatch)
+
+    blank_get = json.loads(tools["query_prim"](action="get", prim_path=""))
+    empty_configure = json.loads(tools["physics_body_config"](action="configure", prim_path="/World/Cube"))
+    blank_body = json.loads(tools["physics_body_config"](action="get", prim_path=" "))
+
+    assert [blank_get["code"], empty_configure["code"], blank_body["code"]] == ["INVALID_ARGUMENT"] * 3
+    assert connection.calls == []
+
+
+def test_action_aware_configure_accepts_explicit_false_and_zero(monkeypatch) -> None:
+    tools, connection = _tools(monkeypatch)
+
+    _call(tools["physics_body_config"], action="configure", prim_path="/World/Cube", collider_enabled=False)
+    _call(tools["physics_body_config"], action="configure", prim_path="/World/Cube", mass_kg=0.0)
+
+    assert connection.calls == [
+        ("physics.configure_body", {"prim_path": "/World/Cube", "body_type": "dynamic", "collider_enabled": False}),
+        ("physics.configure_body", {"prim_path": "/World/Cube", "body_type": "dynamic", "collider_enabled": True, "mass_kg": 0.0}),
+    ]
+
+
 @pytest.mark.parametrize(
     ("tool_name", "kwargs", "expected_command"),
     [
@@ -193,7 +216,7 @@ def test_required_branch_argument_returns_clear_error(monkeypatch) -> None:
         ),
         (
             "physics_body_config",
-            {"action": "configure", "prim_path": "/World/Cube"},
+            {"action": "configure", "prim_path": "/World/Cube", "mass_kg": 1.0},
             "physics.configure_body",
         ),
         ("collision_group", {"action": "get", "group_path": "/World/Group"}, "physics.get_collision_group"),

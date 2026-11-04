@@ -171,7 +171,13 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("new_stage")
     def new_stage(scratch_stage: bool = False, scratch_root: Optional[str] = None, preview: bool = True) -> str:
-        """Preview or create a new empty stage. Requires scratch_stage=true, a scratch_root, stopped timeline, and defaults to preview-only."""
+        """Preview or create a new empty stage. Requires scratch_stage=true, a scratch_root, stopped timeline, and defaults to preview-only.
+
+        Args:
+            scratch_stage: Set true to explicitly declare the new stage as a scratch stage.
+            scratch_root: Existing task-owned directory that bounds stage file operations.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send("stage.new", {"scratch_stage": scratch_stage, "scratch_root": scratch_root, "preview": preview})
 
     @mcp.tool("open_stage")
@@ -182,7 +188,15 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         preview: bool = True,
         readback_root_path: str = "/",
     ) -> str:
-        """Preview or open a local USD stage inside scratch_root. Destructive stage replacement requires explicit scratch_stage=true."""
+        """Preview or open a local USD stage inside scratch_root. Destructive stage replacement requires explicit scratch_stage=true.
+
+        Args:
+            path: Local USD file path inside scratch_root.
+            scratch_stage: Set true only when the current stage is an authorized scratch stage.
+            scratch_root: Existing task-owned directory that bounds stage file operations.
+            preview: When true, validate and report a plan without applying the change.
+            readback_root_path: USD subtree used for composition read-back.
+        """
         return send(
             "stage.open",
             {
@@ -203,7 +217,19 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         preview: bool = True,
         readback_root_path: str = "/",
     ) -> str:
-        """Preview or export the current stage to a different local USD file inside scratch_root. Source overwrite is always rejected."""
+        """Preview or export the current root layer to a local USD file inside scratch_root.
+
+        This is not a complete stage backup: session-layer state, runtime state,
+        and external dependencies are not bundled. Source overwrite is rejected.
+
+        Args:
+            path: Local USD file path inside scratch_root.
+            scratch_stage: Set true only when the current stage is an authorized scratch stage.
+            scratch_root: Existing task-owned directory that bounds stage file operations.
+            overwrite: Whether an existing target file may be replaced.
+            preview: When true, validate and report a plan without applying the change.
+            readback_root_path: USD subtree used for composition read-back.
+        """
         return send(
             "stage.save_as",
             {
@@ -218,12 +244,23 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_stage_composition")
     def get_stage_composition(root_path: str = "/") -> str:
-        """Read the root layer, full layer stack, prim count, references/payloads, variant selections, semantics, and stage metadata."""
+        """Read the root layer, full layer stack, prim count, references/payloads, variant selections, semantics, and stage metadata.
+
+        Args:
+            root_path: Absolute USD root path to inspect.
+        """
         return send("stage.get_composition", {"root_path": root_path})
 
     @mcp.tool("edit_sublayer")
     def edit_sublayer(action: str, layer_path: str, index: int = -1, preview: bool = True) -> str:
-        """Preview or add/remove a root-layer subLayer path with stopped-timeline and exact read-back checks."""
+        """Preview or add/remove a root-layer subLayer path with stopped-timeline and exact read-back checks.
+
+        Args:
+            action: Operation to perform as described for this tool.
+            layer_path: Sublayer path to add or remove.
+            index: Insertion index for add; a negative value appends. Remove uses layer_path.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send(
             "stage.edit_sublayer", {"action": action, "layer_path": layer_path, "index": index, "preview": preview}
         )
@@ -237,7 +274,16 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         target_prim_path: Optional[str] = None,
         preview: bool = True,
     ) -> str:
-        """Preview or edit a reference/payload arc. Payloads also support load/unload; every mutation is read back and rolled back on failure."""
+        """Preview or edit a reference/payload arc. Payloads also support load/unload; every mutation is read back and rolled back on failure.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            arc_type: Composition arc type to modify.
+            action: Operation to perform as described for this tool.
+            asset_path: Asset path required when adding a composition arc.
+            target_prim_path: Optional target Prim path within the referenced or payload asset.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send(
             "stage.edit_composition_arc",
             {
@@ -260,7 +306,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_semantic_labels")
     def get_semantic_labels(prim_path: str) -> str:
-        """Read Isaac Sim 6.0.1 LabelsAPI taxonomies and labels, plus any legacy semantic labels."""
+        """Read Isaac Sim 6.0.1 LabelsAPI taxonomies and labels, plus any legacy semantic labels.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+        """
         return send("stage.get_semantics", {"prim_path": prim_path})
 
     @mcp.tool("set_semantic_labels")
@@ -271,7 +321,15 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         overwrite: bool = False,
         preview: bool = True,
     ) -> str:
-        """Preview or apply Isaac Sim 6.0.1 UsdSemantics LabelsAPI labels under one taxonomy with read-back."""
+        """Preview or apply Isaac Sim 6.0.1 UsdSemantics LabelsAPI labels under one taxonomy with read-back.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+            taxonomy: Semantic label taxonomy name.
+            labels: Semantic labels to assign in the selected taxonomy.
+            overwrite: Whether to replace existing labels in the selected taxonomy.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send(
             "stage.set_semantics",
             {
@@ -314,7 +372,20 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("apply_stage_batch")
     def apply_stage_batch(operations: List[Dict[str, Any]], preview: bool = True, readback_root_path: str = "/") -> str:
-        """Preview or atomically apply up to 100 layer/arc/variant/semantic/attribute edits. Any failed operation restores the stage snapshot."""
+        """Preview or apply up to 100 stage composition edits while the timeline is stopped.
+
+        Failed application attempts snapshot restoration. Inspect readback and errors;
+        restoration is not independently guaranteed if the restoration itself fails.
+
+        Args:
+            operations: Non-empty array of operation objects. edit_sublayer needs action and
+                layer_path; edit_composition_arc needs prim_path, arc_type and action, plus
+                asset_path for add; set_variant needs prim_path, variant_set and selection;
+                set_semantics needs prim_path, taxonomy and labels; set_attribute needs
+                prim_path, attribute, type_name and value.
+            preview: Validate without applying when true; default true.
+            readback_root_path: Root Prim path for the composition readback; default '/'.
+        """
         return send(
             "stage.apply_batch",
             {"operations": operations, "preview": preview, "readback_root_path": readback_root_path},

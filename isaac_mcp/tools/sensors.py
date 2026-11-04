@@ -217,6 +217,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
     ) -> str:
         """Capture an RGB image from a camera sensor.
 
+        Image mode returns native MCP image content alongside the text response;
+        artifact mode returns a managed handle, while inline returns encoded data.
+        Use a compatible initialized camera sensor; an arbitrary viewport camera
+        may lack the required sensor schema. Inspect capture errors and readiness.
+
         Args:
             prim_path: Prim path of the camera.
             output_path: Optional explicit .png path for artifact mode. If omitted, uses the managed artifact root.
@@ -249,6 +254,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         inline_max_bytes: int = 1024 * 1024,
     ) -> str:
         """Capture RGB or a typed RTX camera annotator output.
+
+        Image mode supports RGB only. For CAMERA_IMAGE_CONTENT_UNSUPPORTED,
+        choose RGB or another return mode.
 
         Args:
             prim_path: Prim path of the camera.
@@ -291,7 +299,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_camera_calibration")
     def get_camera_calibration(prim_path: str = "/World/Camera") -> str:
-        """Read camera intrinsics, extrinsics, projection, resolution, and units."""
+        """Read camera intrinsics, extrinsics, projection, resolution, and units.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+        """
         try:
             conn = get_connection()
             result = conn.send_command("sensors.get_camera_calibration", {"prim_path": prim_path})
@@ -358,7 +370,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_lidar_config")
     def get_lidar_config(prim_path: str = "/World/Lidar") -> str:
-        """Read effective LiDAR FOV, angular resolution, rate, range, and USD schema values."""
+        """Read effective LiDAR FOV, angular resolution, rate, range, and USD schema values.
+
+        Args:
+            prim_path: Absolute USD Prim path identifying the target.
+        """
         try:
             conn = get_connection()
             result = conn.send_command("sensors.get_lidar_config", {"prim_path": prim_path})
@@ -374,6 +390,10 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         inline_max_bytes: int = 1024 * 1024,
     ) -> str:
         """Get typed point cloud fields from a lidar sensor.
+
+        Sensor creation does not guarantee a point-cloud frame is ready.
+        LIDAR_FRAME_NOT_READY means no usable frame was available; inspect
+        sensor and simulation readiness before deciding on a bounded retry.
 
         Args:
             prim_path: Prim path of the lidar sensor.

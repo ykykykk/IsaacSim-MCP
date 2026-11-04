@@ -20,6 +20,10 @@ Isaac Sim process
 runtime-state.json
         ↑ read-only
 Python MCP Server / get_runtime_status
+
+latest bounded Kit log tail
+        ↑ redacted errors only
+Python MCP Server / get_runtime_status
 ```
 
 MCP Server 不擁有 Isaac Sim 程序。MCP client 可以同時存在多個 stdio／HTTP server process；只有一個 supervisor 可以擁有指定 port 的 Isaac Sim。Supervisor 啟動前會送出 `system.get_capabilities` health probe。健康 runtime 或已開啟但無回應的 port 都會阻止第二次 launch。
@@ -89,6 +93,12 @@ One-shot 模式不建立 process ownership，也不保證 crash 後自動重啟�
 $env:ISAAC_MCP_RUNTIME_STATE_FILE = "D:\runtime\isaacsim-mcp-state.json"
 ```
 
+`get_runtime_status` 會另外尋找 `%USERPROFILE%\.nvidia-omniverse\logs\Kit` 下最新的 `kit_*.log`。只讀最後 1 MiB，最多回傳 24 筆已去重與 credential redaction 的 error/crash 記錄，不會把整份 Kit log 放進 MCP response。若 Kit log 位於自訂位置，可在啟動 MCP Server 前設定：
+
+```powershell
+$env:ISAAC_MCP_RUNTIME_LOG_FILE = "D:\logs\kit-current.log"
+```
+
 ## MCP diagnostic contract
 
 `get_runtime_status` 是 MCP-local read-only tool，不需要 Extension socket。它會合併 atomic supervisor state 與即時 `system.get_capabilities` protocol probe：
@@ -101,6 +111,8 @@ $env:ISAAC_MCP_RUNTIME_STATE_FILE = "D:\runtime\isaacsim-mcp-state.json"
 | `ISAAC_RUNTIME_UNAVAILABLE` | Runtime 未啟動，或程序／port 無法通過 protocol health。 | 依 `state` 決定啟動 supervisor或檢查既有無回應程序。 |
 
 所有 Extension-backed tools 都保留相同 crash envelope。舊 tool 內部的 generic exception handler 不會再把這些資訊降級為 `COMMAND_FAILED`。
+
+`data.runtime.diagnostics` 在 TCP `8766` 已關閉時仍可使用，會提供目前 session 的 `primary_signature`、`signatures`、每種 signature 的 `signature_evidence`、`log_path`、`log_modified_at` 與 bounded `diagnostic_lines`。Supervisor 在異常退出時也會把同一份 bounded evidence 保存到 `last_crash.diagnostics`；既有 state 缺少該欄位時，MCP 會檢查最近六份 Kit log，找回前一個 crash session。Kit crash reporter 有時會讓 launcher process 暫時保持存活，此時 process exit code 尚未產生，MCP 仍會依最新 crash signature 回 `ISAAC_RUNTIME_CRASHED`，避免只顯示「Not connected to Isaac」。
 
 ## Command delivery 與 no-replay
 
@@ -121,6 +133,6 @@ Stage 的未儲存狀態由 Isaac Sim process 持有。程序重啟不會自動�
 - Windows launcher integration：`tests/test_run_isaac_sim_supervised_windows.py`。
 - Health readiness 使用 protocol response；port-open 只代表 socket 已被占用。
 - 測試不會故意 crash 使用者的 Isaac Sim，也不會 kill alive-but-unresponsive Kit。
-- 真實 native crash root cause 仍需結合 Isaac Sim console、run-scoped Kit log 與 native dump；runtime state 只提供 bounded process／transport evidence。
+- 真實 native crash root cause仍需結合完整 run-scoped Kit log 與 native dump；MCP diagnostics 只提供 bounded、redacted 的修復線索。
 
 錯誤分支與 Agent recovery matrix 見 [Error Codes and Agent Recovery](../reference/ERROR_CODES.md)，response 欄位見 [MCP response schema](../reference/RESPONSE_SCHEMA.md)。

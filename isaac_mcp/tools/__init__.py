@@ -29,11 +29,13 @@ import asyncio
 import functools
 import inspect
 import json
+import re
 import time
 from inspect import Parameter, Signature
-from typing import TYPE_CHECKING, Any, Callable, Optional, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, Callable, Optional, get_origin, get_type_hints
 
 from mcp.types import CallToolResult, ImageContent, TextContent
+from pydantic import Field
 
 from isaac_mcp.command_context import command_id_var, idempotency_key_var
 from isaac_mcp.responses import NativeImageResponse, normalize_response
@@ -160,10 +162,31 @@ def _runtime_aware_connection_provider(
     return provide
 
 
-def _serialize_tool_response(value: Any, elapsed_ms: float) -> str | CallToolResult:
+def _serialize_tool_response(
+    value: Any,
+    elapsed_ms: float,
+    *,
+    command_id: str | None = None,
+) -> str | CallToolResult:
+    """Serialize one tool outcome without losing its caller correlation ID.
+
+    A downstream transport response is authoritative for its own ``command_id``.
+    If it disagrees with the MCP caller, retain that value and make the mismatch
+    visible instead of silently substituting the caller value.
+    """
     native_image = value if isinstance(value, NativeImageResponse) else None
     response = native_image.response if native_image is not None else value
-    envelope = normalize_response(response, timing={"mcp_tool_ms": round(elapsed_ms, 3)})
+    envelope = normalize_response(
+        response,
+        command_id=command_id,
+        timing={"mcp_tool_ms": round(elapsed_ms, 3)},
+    )
+    if command_id is not None and envelope["command_id"] != str(command_id):
+        envelope["warnings"].append(
+            "COMMAND_ID_MISMATCH: caller command_id "
+            f"{command_id!r} differs from downstream command_id {envelope['command_id']!r}; "
+            "the downstream value was preserved."
+        )
     serialized = json.dumps(envelope, indent=2, sort_keys=True)
     if native_image is None:
         return serialized
@@ -174,6 +197,28 @@ def _serialize_tool_response(value: Any, elapsed_ms: float) -> str | CallToolRes
         ],
         structuredContent={"result": serialized},
     )
+
+
+def _argument_descriptions(function: Callable[..., Any]) -> dict[str, str]:
+    """Extract Google-style Args without changing a function's validation."""
+    descriptions: dict[str, str] = {}
+    in_args = False
+    current: str | None = None
+    for line in inspect.cleandoc(function.__doc__ or "").splitlines():
+        if line.strip() in {"Args:", "Parameters:"}:
+            in_args = True
+            continue
+        if not in_args:
+            continue
+        if line and not line[0].isspace():
+            break
+        match = re.match(r"\s+(\w+)(?:\s*\([^)]*\))?:\s*(.*)", line)
+        if match:
+            current = match.group(1)
+            descriptions[current] = match.group(2).strip()
+        elif current and line.strip():
+            descriptions[current] += " " + line.strip()
+    return descriptions
 
 
 def _wrap_tool(function: Callable[..., Any]) -> Callable[..., Any]:
@@ -191,6 +236,7 @@ def _wrap_tool(function: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(function)
         async def async_wrapped(*args: Any, **kwargs: Any) -> Any:
             started = time.perf_counter()
+            command_id = kwargs.get("command_id")
             tokens = enter_command_context(kwargs)
             try:
                 value = await function(*args, **kwargs)
@@ -204,7 +250,11 @@ def _wrap_tool(function: Callable[..., Any]) -> Callable[..., Any]:
                 value = {"status": "error", "code": "MCP_TOOL_ERROR", "message": str(exc)}
             finally:
                 exit_command_context(tokens)
-            return _serialize_tool_response(value, (time.perf_counter() - started) * 1000)
+            return _serialize_tool_response(
+                value,
+                (time.perf_counter() - started) * 1000,
+                command_id=command_id,
+            )
 
         wrapped = async_wrapped
 
@@ -213,6 +263,7 @@ def _wrap_tool(function: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(function)
         def sync_wrapped(*args: Any, **kwargs: Any) -> Any:
             started = time.perf_counter()
+            command_id = kwargs.get("command_id")
             tokens = enter_command_context(kwargs)
             try:
                 value = function(*args, **kwargs)
@@ -224,31 +275,44 @@ def _wrap_tool(function: Callable[..., Any]) -> Callable[..., Any]:
                 value = {"status": "error", "code": "MCP_TOOL_ERROR", "message": str(exc)}
             finally:
                 exit_command_context(tokens)
-            return _serialize_tool_response(value, (time.perf_counter() - started) * 1000)
+            return _serialize_tool_response(
+                value,
+                (time.perf_counter() - started) * 1000,
+                command_id=command_id,
+            )
 
         wrapped = sync_wrapped
 
     original = inspect.signature(function)
     try:
-        resolved_hints = get_type_hints(function)
+        resolved_hints = get_type_hints(function, include_extras=True)
     except (NameError, TypeError):
         resolved_hints = {}
-    parameters = [
-        parameter.replace(annotation=resolved_hints.get(parameter.name, parameter.annotation))
-        for parameter in original.parameters.values()
-    ]
+    descriptions = _argument_descriptions(function)
+    parameters = []
+    for parameter in original.parameters.values():
+        annotation = resolved_hints.get(parameter.name, parameter.annotation)
+        if descriptions.get(parameter.name) and annotation is not Parameter.empty and get_origin(annotation) is not Annotated:
+            annotation = Annotated[annotation, Field(description=descriptions[parameter.name])]
+        parameters.append(parameter.replace(annotation=annotation))
     insertion = len(parameters)
     for index, parameter in enumerate(parameters):
         if parameter.kind in (Parameter.VAR_KEYWORD,):
             insertion = index
             break
     metadata = [
-        Parameter("command_id", kind=Parameter.KEYWORD_ONLY, default=None, annotation=Optional[str]),
-        Parameter("idempotency_key", kind=Parameter.KEYWORD_ONLY, default=None, annotation=Optional[str]),
+        Parameter("command_id", kind=Parameter.KEYWORD_ONLY, default=None, annotation=Annotated[Optional[str], Field(description="Optional command correlation identifier.")]),
+        Parameter("idempotency_key", kind=Parameter.KEYWORD_ONLY, default=None, annotation=Annotated[Optional[str], Field(description="Optional idempotency key; handling depends on the command and server policy.")]),
     ]
     wrapped.__signature__ = Signature(
         parameters[:insertion] + metadata + parameters[insertion:],
         return_annotation=resolved_hints.get("return", str),
+    )
+    wrapped.__doc__ = (function.__doc__ or "").rstrip() + (
+        "\n\nReturns: A JSON response envelope with schema_version, status, code, message, data, "
+        "warnings, command_id, timing, artifacts and readback. Check status and code before using data. "
+        "On failure inspect message and readback before deciding whether a retry is safe. "
+        "Some camera image requests additionally return native image content."
     )
     return wrapped
 

@@ -1,0 +1,6 @@
+interface:
+  display_name: "IsaacSim Project Verifier"
+  short_description: "用程式、log、Camera 與 read-back 驗證 Isaac Sim 需求"
+  default_prompt: "Use $isaacsim-project-verifier to implement this IsaacSim-MCP requirement and verify code execution, logs, Camera output, and runtime read-back."
+policy:
+  allow_implicit_invocation: false

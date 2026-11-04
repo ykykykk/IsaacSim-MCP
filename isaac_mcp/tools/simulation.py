@@ -142,6 +142,14 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         except Exception as e:
             return json.dumps({"status": "error", "message": str(e)})
 
+    @mcp.tool("get_physics_params")
+    def get_physics_params() -> str:
+        """Read USD and runtime PhysX settings without creating or modifying a PhysicsScene."""
+        try:
+            return json.dumps(get_connection().send_command("simulation.get_physics_params"), indent=2)
+        except Exception as e:
+            return json.dumps({"status": "error", "message": str(e)})
+
     @mcp.tool("get_isaac_logs")
     def get_isaac_logs(
         clear: bool = False,
@@ -160,6 +168,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         Defaults are agent-friendly: non-destructive (clear=False) and scoped to
         the current run (since_last_play=True) so you see logs from what you just
         did, not stale entries from previous runs.
+
+        count limits returned entries; the Kit log suffix can be read in full
+        before that limit is applied, so memory usage is not bounded by count.
 
         Args:
             clear: If True, empty the buffer after reading. Default False.
@@ -348,6 +359,10 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_script_audit_log")
     def get_script_audit_log(count: int = 50) -> str:
-        """Return bounded script audit metadata. Source code is represented only by SHA-256."""
+        """Return bounded script audit metadata. Source code is represented only by SHA-256.
+
+        Args:
+            count: Maximum number of audit entries to return.
+        """
         conn = get_connection()
         return json.dumps(conn.send_command("simulation.get_script_audit", {"count": count}), indent=2)

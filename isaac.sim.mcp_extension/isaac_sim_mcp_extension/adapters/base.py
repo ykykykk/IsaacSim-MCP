@@ -384,6 +384,10 @@ class IsaacAdapterBase(ABC):
             "atomic": True,
         }
 
+    def get_physics_params(self) -> Dict[str, Any]:
+        """Return authored and runtime physics parameters without changing the Stage."""
+        raise NotImplementedError("Physics parameter read-back requires the Isaac Sim 6.x adapter")
+
     @abstractmethod
     def get_physics_state(self, prim_path: str) -> Dict[str, Any]:
         """Return physics state for a prim: rigid body, mass, velocities, contacts."""

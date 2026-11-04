@@ -56,8 +56,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         """Read supervisor, crash, restart, and protocol-health state without requiring Isaac Sim.
 
         This local diagnostic remains available when the extension socket is
-        closed. It never starts, stops, or mutates Isaac Sim and never replays a
-        failed command.
+        closed. It includes bounded, redacted evidence from the current Kit log
+        and the previous crash session when available. It never starts, stops,
+        or mutates Isaac Sim and never replays a failed command.
         """
         runtime = read_runtime_status()
         return json.dumps(

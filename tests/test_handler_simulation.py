@@ -150,6 +150,9 @@ class _GravityAdapter:
             "atomic": True,
         }
 
+    def get_physics_params(self):
+        return {"scene_path": "/World/PhysicsScene", "backend": "physx", "readback": {"usd": {"gpu_enabled": False}, "runtime": {"broadphase_type": "MBP"}}}
+
 
 def test_set_physics_forwards_gravity_to_the_adapter():
     """Gravity used to be accepted and dropped: asking for Mars [0,0,-3.72] on
@@ -183,6 +186,17 @@ def test_set_physics_rejects_an_empty_request():
 
     assert result["status"] == "error"
     assert result["code"] == "PHYSICS_PARAMS_REQUIRED"
+
+
+def test_get_physics_params_is_a_read_only_explicit_oracle():
+    result = sim.get_physics_params(_GravityAdapter())
+
+    assert result == {
+        "status": "success",
+        "code": "PHYSICS_PARAMS_READ",
+        "data": {"scene_path": "/World/PhysicsScene", "backend": "physx", "readback": {"usd": {"gpu_enabled": False}, "runtime": {"broadphase_type": "MBP"}}},
+        "readback": {"usd": {"gpu_enabled": False}, "runtime": {"broadphase_type": "MBP"}},
+    }
 
 
 @pytest.mark.parametrize(

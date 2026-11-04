@@ -32,7 +32,7 @@ def _registered(monkeypatch: pytest.MonkeyPatch, profile: str | None) -> set[str
 
 def test_default_profile_preserves_legacy_public_contract(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _registered(monkeypatch, None) == set(tool_names("legacy"))
-    assert len(tool_names("legacy")) == 129
+    assert len(tool_names("legacy")) == 130
     assert "list_prims" in tool_names("legacy")
     assert "query_prim" not in tool_names("legacy")
 

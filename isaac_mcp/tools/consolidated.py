@@ -20,6 +20,10 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         missing = [name for name in names if values.get(name) is None]
         return error(f"{', '.join(missing)} is required for this action") if missing else None
 
+    def require_path(values: Dict[str, Any], *names: str) -> Optional[str]:
+        invalid = [name for name in names if not isinstance(values.get(name), str) or not values[name].strip()]
+        return error(f"{', '.join(invalid)} must be non-empty absolute Prim paths") if invalid else None
+
     @mcp.tool("query_prim")
     def query_prim(
         action: Literal["list", "get"],
@@ -27,10 +31,17 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         prim_type: Optional[str] = None,
         prim_path: Optional[str] = None,
     ) -> str:
-        """List a USD subtree or get one Prim. Use action=list or action=get."""
+        """List a subtree or read one Prim. For get, prim_path is required; list uses root_path and prim_type.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            root_path: USD root Prim path for listing.
+            prim_type: Optional Prim type filter for listing.
+            prim_path: USD Prim path for the selected operation.
+        """
         if action == "list":
             return invoke("list_prims", root_path=root_path, prim_type=prim_type)
-        invalid = require(locals(), "prim_path")
+        invalid = require_path(locals(), "prim_path")
         return invalid or invoke("get_prim_info", prim_path=prim_path)
 
     @mcp.tool("semantic_labels")
@@ -42,7 +53,16 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         overwrite: bool = False,
         preview: bool = True,
     ) -> str:
-        """Read or set Isaac Sim semantic labels on one Prim."""
+        """Read labels or set them. For set, taxonomy and labels are required; preview defaults to true.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            taxonomy: Semantic taxonomy; required for set.
+            labels: Semantic labels; required for set.
+            overwrite: Whether existing authored data may be overwritten.
+            preview: When true validate and report without applying the requested change.
+        """
         if action == "get":
             return invoke("get_semantic_labels", prim_path=prim_path)
         invalid = require(locals(), "taxonomy", "labels")
@@ -66,7 +86,18 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         overwrite: bool = False,
         preview: bool = True,
     ) -> str:
-        """Read or set one explicitly typed USD attribute."""
+        """Read or set a USD attribute. For set, type_name and value are required; preview defaults to true.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            attribute: USD attribute name.
+            type_name: Explicit USD value type; required for set.
+            value: Attribute value matching type_name; required for set.
+            custom: Whether a newly created attribute is custom.
+            overwrite: Whether existing authored data may be overwritten.
+            preview: When true validate and report without applying the requested change.
+        """
         if action == "get":
             return invoke("get_typed_attribute", prim_path=prim_path, attribute=attribute)
         invalid = require(locals(), "type_name", "value")
@@ -85,20 +116,37 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
     def physics_body_config(
         action: Literal["get", "configure"],
         prim_path: str,
-        body_type: str = "dynamic",
-        collider_enabled: bool = True,
+        body_type: Optional[str] = None,
+        collider_enabled: Optional[bool] = None,
         approximation: Optional[str] = None,
         mass_kg: Optional[float] = None,
         density_kg_m3: Optional[float] = None,
     ) -> str:
-        """Read or atomically configure rigid-body and collider properties."""
+        """Read or configure a body. Configure requires at least one configuration field; it writes body settings.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            body_type: Requested rigid or static body type.
+            collider_enabled: Whether to enable the collider.
+            approximation: Collider approximation name.
+            mass_kg: Body mass in kilograms.
+            density_kg_m3: Body density in kilograms per cubic metre.
+        """
         if action == "get":
-            return invoke("get_physics_body", prim_path=prim_path)
+            invalid = require_path(locals(), "prim_path")
+            return invalid or invoke("get_physics_body", prim_path=prim_path)
+        invalid = require_path(locals(), "prim_path")
+        if invalid:
+            return invalid
+        configured = (body_type, collider_enabled, approximation, mass_kg, density_kg_m3)
+        if all(value is None for value in configured):
+            return error("physics_body_config(action=configure) requires at least one configuration field")
         return invoke(
             "configure_physics_body",
             prim_path=prim_path,
-            body_type=body_type,
-            collider_enabled=collider_enabled,
+            body_type="dynamic" if body_type is None else body_type,
+            collider_enabled=True if collider_enabled is None else collider_enabled,
             approximation=approximation,
             mass_kg=mass_kg,
             density_kg_m3=density_kg_m3,
@@ -113,7 +161,16 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         invert_filtered_groups: bool = False,
         merge_group_name: Optional[str] = None,
     ) -> str:
-        """Read or create a USD collision group."""
+        """Read or create a collision group. For create, collider_paths is required and the stage is changed.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            group_path: USD collision group Prim path.
+            collider_paths: Collider Prim paths; required for create.
+            filtered_group_paths: Collision group paths to filter.
+            invert_filtered_groups: Whether to invert the collision filter relationship.
+            merge_group_name: Optional collision group merge name.
+        """
         if action == "get":
             return invoke("get_collision_group", group_path=group_path)
         invalid = require(locals(), "collider_paths")
@@ -142,7 +199,23 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         local_rotation1: Optional[List[float]] = None,
         collision_enabled: bool = False,
     ) -> str:
-        """Read or create one fixed, revolute, or prismatic physics joint."""
+        """Read or create a joint. For create, joint_type and body1 are required and the stage is changed.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            joint_path: USD joint Prim path.
+            joint_type: Joint type: fixed, revolute or prismatic; required for create.
+            body1: Second body Prim path; required for create.
+            body0: Optional first body Prim path.
+            axis: Joint axis.
+            lower_limit: Lower limit in meters for prismatic or degrees for revolute joints.
+            upper_limit: Upper limit in meters for prismatic or degrees for revolute joints.
+            local_position0: Local position of joint frame on body0 in meters.
+            local_rotation0: Local rotation of joint frame on body0 as [w, x, y, z].
+            local_position1: Local position of joint frame on body1 in meters.
+            local_rotation1: Local rotation of joint frame on body1 as [w, x, y, z].
+            collision_enabled: Whether connected bodies may collide.
+        """
         if action == "get":
             return invoke("get_physics_joint", joint_path=joint_path)
         invalid = require(locals(), "joint_type", "body1")
@@ -164,12 +237,20 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
 
     @mcp.tool("control_timeline")
     def control_timeline(action: Literal["play", "pause", "stop"]) -> str:
-        """Play, pause, or stop the Isaac Sim timeline."""
+        """Play, pause or stop the timeline. Stop resets the scene to its spawn state.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+        """
         return invoke({"play": "play_simulation", "pause": "pause_simulation", "stop": "stop_simulation"}[action])
 
     @mcp.tool("robot_library")
     def robot_library(action: Literal["list", "refresh"] = "list") -> str:
-        """List the robot asset library or refresh its discovery cache."""
+        """List discovered robots or refresh the discovery cache; refresh triggers a new scan.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+        """
         return invoke("list_available_robots" if action == "list" else "refresh_robot_library")
 
     @mcp.tool("control_gripper")
@@ -179,7 +260,14 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         profile: str,
         width_m: Optional[float] = None,
     ) -> str:
-        """Set a gripper width, open it, or close it using an explicit profile."""
+        """Set width, open or close a gripper. Set_width requires width_m and writes the command target.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            profile: Exact supported controller profile name.
+            width_m: Total gripper opening in metres; required for set_width.
+        """
         if action == "set_width":
             invalid = require(locals(), "width_m")
             return invalid or invoke("set_gripper_width", prim_path=prim_path, profile=profile, width_m=width_m)
@@ -194,7 +282,16 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         lateral_mps: float = 0.0,
         yaw_radps: float = 0.0,
     ) -> str:
-        """Set mobile-base velocity or stop it with a verified zero command."""
+        """Set or stop a mobile base. Set requires forward_mps; stop writes zero wheel targets.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            profile: Exact supported controller profile name.
+            forward_mps: Forward speed in metres per second; required for set.
+            lateral_mps: Lateral speed in metres per second.
+            yaw_radps: Yaw rate in radians per second.
+        """
         if action == "stop":
             return invoke("stop_mobile_base", prim_path=prim_path, profile=profile)
         invalid = require(locals(), "forward_mps")
@@ -209,7 +306,12 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
 
     @mcp.tool("motion_job")
     def motion_job(action: Literal["get", "cancel"], job_id: str) -> str:
-        """Get or cancel an asynchronous robot-motion job."""
+        """Get a motion job or request cancellation; cancellation holds the last commanded position.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            job_id: Opaque identifier of the job to inspect or cancel.
+        """
         return invoke("get_motion_status" if action == "get" else "cancel_motion", job_id=job_id)
 
     @mcp.tool("material_definition")
@@ -225,7 +327,20 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         dynamic_friction: float = 0.5,
         restitution: float = 0.0,
     ) -> str:
-        """Read a material definition or create a visual/physics material."""
+        """Read or create a material. Get requires material_path; create writes a material to the stage.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            material_path: Material Prim path; required for get or apply as applicable.
+            material_type: Material type to create.
+            prim_path: USD Prim path for the selected operation.
+            color: Color components for the material or light.
+            roughness: PBR material roughness.
+            metallic: PBR material metallic value.
+            static_friction: Physics material static friction.
+            dynamic_friction: Physics material dynamic friction.
+            restitution: Physics material restitution.
+        """
         if action == "get":
             invalid = require(locals(), "material_path")
             return invalid or invoke("get_material", material_path=material_path)
@@ -248,7 +363,14 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         material_path: Optional[str] = None,
         material_purpose: Optional[str] = None,
     ) -> str:
-        """Read or apply a material binding on one Prim."""
+        """Read or apply a material binding. Apply requires material_path and changes the stage.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            target_prim_path: Target Prim path; used by the selected operation.
+            material_path: Material Prim path; required for get or apply as applicable.
+            material_purpose: Material binding purpose; defaults depend on action.
+        """
         if action == "get":
             return invoke(
                 "get_material_binding",
@@ -273,7 +395,17 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         color: Optional[List[float]] = None,
         rotation: Optional[List[float]] = None,
     ) -> str:
-        """Create a light or modify the supported properties of an existing light."""
+        """Create or modify a light. Modify requires prim_path; create uses intensity 1000 when omitted.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            prim_path: USD Prim path for the selected operation.
+            light_type: Type of light to create.
+            position: Position vector for the created light.
+            intensity: Light intensity; create uses 1000 when omitted.
+            color: Color components for the material or light.
+            rotation: Rotation vector for the created light.
+        """
         if action == "modify":
             invalid = require(locals(), "prim_path")
             return invalid or invoke("modify_light", prim_path=prim_path, intensity=intensity, color=color)
@@ -294,7 +426,14 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         include_external: bool = True,
         human_path: Optional[str] = None,
     ) -> str:
-        """List humans below a root or get one human's state."""
+        """List humans or get one human. Get requires human_path.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            root_prim_path: Root Prim path for listing humans.
+            include_external: Whether to include external humans in the list.
+            human_path: Human Prim path; required for get or human actions.
+        """
         if action == "list":
             return invoke("list_humans", root_prim_path=root_prim_path, include_external=include_external)
         invalid = require(locals(), "human_path")
@@ -313,7 +452,20 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         facing_prim_path: Optional[str] = None,
         preview: bool = True,
     ) -> str:
-        """Move, orient, or idle one Behavior Agent human."""
+        """Preview or issue a target, look_at or idle action. Target and look_at require exactly one of target_position and target_prim_path; idle may specify one facing target. Preview defaults to true.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            human_path: Human Prim path; required for get or human actions.
+            target_position: Target position vector; choose with the target Prim path according to the action.
+            target_prim_path: Target Prim path; used by the selected operation.
+            speed_mps: Target movement speed in metres per second.
+            auto_brake: Whether to brake automatically at the target.
+            duration_seconds: Look-at duration in seconds; zero means indefinite.
+            facing_position: Optional facing position for idle.
+            facing_prim_path: Optional facing Prim path for idle.
+            preview: When true validate and report without applying the requested change.
+        """
         if action == "target":
             return invoke(
                 "set_human_target",
@@ -363,7 +515,29 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         lidar_type: str = "point_cloud",
         use_system_time: bool = False,
     ) -> str:
-        """Create a Clock, TF, JointState, Camera, or LiDAR ROS 2 publisher."""
+        """Preview or create a ROS 2 publisher. Clock has a default graph_path; other types require graph_path. TF requires target_prims, joint_state target_prim, camera camera_prim_path, lidar lidar_prim_path. Preview defaults to true.
+
+        Args:
+            publisher_type: ROS 2 publisher type; determines the required target fields.
+            graph_path: Action Graph Prim path. Clock uses a default when omitted; all other publisher types require this path.
+            topic_name: ROS 2 topic name; defaults depend on publisher_type.
+            node_namespace: ROS 2 node namespace.
+            domain_id: Optional ROS 2 domain ID.
+            qos_profile: QoS profile; default depends on publisher_type.
+            preview: When true validate and report without applying the requested change.
+            reset_on_stop: Whether the clock resets on stop.
+            target_prims: Target Prim paths; required for TF publisher.
+            parent_prim: Optional parent Prim for TF publisher.
+            static_publisher: Whether the TF publisher is static.
+            target_prim: Target Prim path; required for joint_state publisher.
+            camera_prim_path: Camera Prim path; required for camera publisher.
+            lidar_prim_path: LiDAR Prim path; required for lidar publisher.
+            render_product_path: Optional render product path.
+            frame_id: ROS 2 frame identifier; default depends on publisher_type.
+            camera_type: Camera output type.
+            lidar_type: LiDAR output type.
+            use_system_time: Whether to use system time for timestamps.
+        """
         if publisher_type == "clock":
             return invoke(
                 "create_ros2_clock_publisher",
@@ -438,14 +612,25 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
 
     @mcp.tool("sdg_job_control")
     def sdg_job_control(action: Literal["get", "cancel"], job_id: str, preview: bool = True) -> str:
-        """Get or cancel one Replicator SDG job."""
+        """Read or cancel a Replicator SDG job. Cancel defaults to preview only.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            job_id: Opaque identifier of the job to inspect or cancel.
+            preview: When true validate and report without applying the requested change.
+        """
         if action == "get":
             return invoke("get_sdg_job_status", job_id=job_id)
         return invoke("cancel_sdg_job", job_id=job_id, preview=preview)
 
     @mcp.tool("job_control")
     def job_control(action: Literal["get", "cancel"], job_id: str) -> str:
-        """Get or cancel one generic managed background job."""
+        """Read or request cancellation of a managed job. Check its returned state after cancellation.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            job_id: Opaque identifier of the job to inspect or cancel.
+        """
         return invoke("get_job_status" if action == "get" else "cancel_job", job_id=job_id)
 
     @mcp.tool("query_action_graph")
@@ -457,7 +642,16 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         include_values: bool = False,
         include_script_source: bool = False,
     ) -> str:
-        """List Action Graphs or inspect one exact graph."""
+        """List graphs or inspect one. Get requires graph_path; source and values are optional.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            root_path: USD root Prim path for listing.
+            include_disabled: Whether to include disabled Action Graphs.
+            graph_path: Action Graph Prim path; required for get and unused for list.
+            include_values: Whether to include graph attribute values.
+            include_script_source: Whether to include ScriptNode source.
+        """
         if action == "list":
             return invoke("list_action_graphs", root_path=root_path, include_disabled=include_disabled)
         invalid = require(locals(), "graph_path")
@@ -476,7 +670,15 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         target_attr: str,
         preview: bool = True,
     ) -> str:
-        """Connect or disconnect one exact Action Graph edge."""
+        """Preview or connect/disconnect a graph edge. Preview defaults to true.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            graph_path: Action Graph Prim path; required for connect and disconnect.
+            source_attr: Source graph output attribute path.
+            target_attr: Target graph input attribute path.
+            preview: When true validate and report without applying the requested change.
+        """
         return invoke(
             f"{action}_action_graph",
             graph_path=graph_path,
@@ -495,7 +697,17 @@ def register_tools(mcp: Any, _get_connection: "Callable[[], IsaacConnection]") -
         script_file: Optional[str] = None,
         preview: bool = True,
     ) -> str:
-        """Configure or reload one exact ScriptNode source."""
+        """Preview or configure/reload a ScriptNode. Configure defaults to inline mode; supply source for the selected mode. Preview defaults to true.
+
+        Args:
+            action: Operation to perform; see the action-specific requirements above.
+            graph_path: Action Graph Prim path; required for configure and reload.
+            node_path: ScriptNode path within the graph.
+            mode: Script source mode; configure defaults to inline.
+            inline_script: Inline Python source when using inline mode.
+            script_file: Script source file path when using file mode.
+            preview: When true validate and report without applying the requested change.
+        """
         if action == "configure":
             return invoke(
                 "configure_script_node",

@@ -69,12 +69,10 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
         A NavMesh is required. The tool can bake an authored volume and waits
         up to 2000 update frames for complex factory stages. The extension is
-        enabled automatically, but the tool fails closed when no usable
-        NavMesh or character assets are available. Stop the timeline first.
-
-        ``execute_script`` remains useful for one-off IRA experiments.
-        ``reload_script`` is the better companion for reusable interaction or
-        event logic after characters have been spawned.
+        enabled automatically. A failed spawn may still leave an auto-created
+        NavMeshVolume or other partial changes; inspect the stage and response
+        before retrying. Stop or pause the timeline first. Script tools, when
+        available, are governed by the configured script policy.
 
         Args:
             count: Number of new characters to add, from 1 to 25.
@@ -135,17 +133,32 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("list_humans")
     def list_humans(root_prim_path: str = "/World/Characters", include_external: bool = True) -> str:
-        """List IRA human characters without changing the stage."""
+        """List IRA human characters without changing the stage.
+
+        Args:
+            root_prim_path: USD root path under which humans are listed.
+            include_external: Whether to include humans not created by this MCP.
+        """
         return send("humans.list", {"root_prim_path": root_prim_path, "include_external": include_external})
 
     @mcp.tool("get_human")
     def get_human(human_path: str) -> str:
-        """Return USD and live Behavior Agent state for one IRA human."""
+        """Return USD and live Behavior Agent state for one IRA human.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+        """
         return send("humans.get", {"human_path": human_path})
 
     @mcp.tool("delete_human")
     def delete_human(human_path: str, delete_empty_group: bool = True, preview: bool = True) -> str:
-        """Delete one MCP-owned human. Preview is enabled by default."""
+        """Delete one MCP-owned human. Preview is enabled by default.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+            delete_empty_group: Whether to delete the now-empty owned human group.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send(
             "humans.delete",
             {"human_path": human_path, "delete_empty_group": delete_empty_group, "preview": preview},
@@ -160,7 +173,19 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         auto_brake: bool = True,
         preview: bool = True,
     ) -> str:
-        """Issue a Behavior Agent MoveTo task to exactly one target."""
+        """Issue a Behavior Agent MoveTo task to exactly one target.
+
+        Non-preview requests require an MCP-owned, ready agent and a playing
+        timeline. Task acceptance is not evidence that movement completed.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+            target_position: Target [x, y, z]; provide exactly one of target_position and target_prim_path.
+            target_prim_path: Optional target Prim path; use instead of target_position where applicable.
+            speed_mps: Requested speed in meters per second.
+            auto_brake: Whether the human should brake automatically at the target.
+            preview: When true, validate and report a plan without applying the change.
+        """
         params: Dict[str, Any] = {
             "human_path": human_path,
             "auto_brake": auto_brake,
@@ -182,7 +207,18 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         duration_seconds: float = 0.0,
         preview: bool = True,
     ) -> str:
-        """Issue a Behavior Agent LookAt task; zero duration means indefinite."""
+        """Issue a Behavior Agent LookAt task; zero duration means indefinite.
+
+        Non-preview requests require an MCP-owned, ready agent and a playing
+        timeline. Inspect subsequent agent state; acceptance is not completion.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+            target_position: Target [x, y, z]; provide exactly one of target_position and target_prim_path.
+            target_prim_path: Optional target Prim path; use instead of target_position where applicable.
+            duration_seconds: Look-at duration in seconds; zero means indefinite.
+            preview: When true, validate and report a plan without applying the change.
+        """
         params: Dict[str, Any] = {
             "human_path": human_path,
             "duration_seconds": duration_seconds,
@@ -201,7 +237,16 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         facing_prim_path: Optional[str] = None,
         preview: bool = True,
     ) -> str:
-        """Cancel the active action by issuing Idle, optionally facing one target."""
+        """Cancel the active action by issuing Idle, optionally facing one target.
+
+        Non-preview requests require an MCP-owned, ready agent and a playing timeline.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+            facing_position: Optional facing position as [x, y, z].
+            facing_prim_path: Optional Prim path to face instead of a position.
+            preview: When true, validate and report a plan without applying the change.
+        """
         params: Dict[str, Any] = {"human_path": human_path, "preview": preview}
         if facing_position is not None:
             params["facing_position"] = facing_position
@@ -219,7 +264,17 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         auto_avoidance_enabled: Optional[bool] = None,
         preview: bool = True,
     ) -> str:
-        """Update supported live Behavior Agent settings with read-back."""
+        """Update supported live Behavior Agent settings with read-back.
+
+        Args:
+            human_path: Absolute Prim path of the target human.
+            enabled: Desired Behavior Agent enabled state.
+            speed_mps: Requested speed in meters per second.
+            navigation_areas: Optional allowed NavMesh area names.
+            obstacle_avoidance_enabled: Desired obstacle-avoidance enabled state.
+            auto_avoidance_enabled: Desired automatic-avoidance enabled state.
+            preview: When true, validate and report a plan without applying the change.
+        """
         params: Dict[str, Any] = {"human_path": human_path, "preview": preview}
         optional = {
             "enabled": enabled,
@@ -242,7 +297,16 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         preview: bool = True,
         timeout_seconds: float = 120.0,
     ) -> str:
-        """Bake NavMesh with frame/wall-clock bounds; preview by default."""
+        """Bake NavMesh with frame/wall-clock bounds; preview by default.
+
+        Inspect the ready, reason, start and cancellation read-back before
+        deciding whether a failed or timed-out bake can be retried.
+
+        Args:
+            max_frames: Maximum update frames to wait for NavMesh baking.
+            preview: When true, validate and report a plan without applying the change.
+            timeout_seconds: Wall-clock timeout in seconds for NavMesh baking.
+        """
         return send(
             "humans.bake_navmesh",
             {

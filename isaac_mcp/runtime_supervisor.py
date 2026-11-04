@@ -13,7 +13,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from isaac_mcp.runtime_status import STATE_SCHEMA_VERSION, default_state_file, probe_runtime_health, utc_now
+from isaac_mcp.runtime_status import (
+    STATE_SCHEMA_VERSION,
+    default_state_file,
+    probe_runtime_health,
+    read_runtime_diagnostics,
+    utc_now,
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +73,7 @@ def _state(config: SupervisorConfig, state: str, **fields: Any) -> dict[str, Any
         "schema_version": STATE_SCHEMA_VERSION,
         "state": state,
         "supervised": True,
+        "host": "127.0.0.1",
         "supervisor_pid": os.getpid(),
         "port": config.port,
         "max_restarts": config.max_restarts,
@@ -83,6 +90,7 @@ def run_supervisor(
     health_probe: Callable[..., dict[str, Any]] = probe_runtime_health,
     sleep: Callable[[float], None] = time.sleep,
     write_state: Callable[[Path, dict[str, Any]], None] = write_runtime_state,
+    diagnostics_reader: Callable[[], dict[str, Any]] = read_runtime_diagnostics,
 ) -> int:
     """Run until a normal exit or the bounded crash-restart budget is exhausted."""
     restart_times: deque[float] = deque()
@@ -153,7 +161,16 @@ def run_supervisor(
                         live_state,
                         attempt=attempt,
                         restart_count=restart_count,
+                        # ``process`` is the supervisor's PowerShell launcher,
+                        # not a Kit process.  Keep runtime_pid as a documented
+                        # legacy alias for existing readers, but never infer a
+                        # Kit PID or compare the two roles as if they matched.
                         runtime_pid=getattr(process, "pid", None),
+                        runtime_pid_provenance="legacy_alias_of_launcher_pid",
+                        launcher_pid=getattr(process, "pid", None),
+                        launcher_pid_provenance="supervisor_child_process",
+                        kit_pid=None,
+                        kit_pid_provenance="unknown_not_exposed_by_system.get_capabilities",
                         last_crash=last_crash,
                         last_healthy_at=last_healthy_at,
                         health=last_health,
@@ -186,6 +203,11 @@ def run_supervisor(
             "was_ready": was_ready,
             "last_health": last_health,
         }
+        diagnostics = diagnostics_reader()
+        if diagnostics.get("available") and (
+            diagnostics.get("crash_detected") or diagnostics.get("diagnostic_lines")
+        ):
+            last_crash["diagnostics"] = diagnostics
         while restart_times and crashed_at - restart_times[0] > config.restart_window_seconds:
             restart_times.popleft()
         if len(restart_times) >= config.max_restarts:

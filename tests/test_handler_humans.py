@@ -434,3 +434,104 @@ def test_spawn_exposes_navmesh_failure_diagnostics(monkeypatch):
     assert result["navmesh_start_result"] is True
     assert result["navmesh_diagnostics"]["elapsed_seconds"] == 0.25
     assert result["navmesh_diagnostics"]["settle_frames"] == 5
+
+    monkeypatch.setattr(humans, "_ensure_navmesh_volume", lambda *_args: ("/World/NavMeshVolume", True))
+    app = MagicMock()
+
+    async def _next_update():
+        return None
+
+    app.next_update_async = _next_update
+    app_module = types.ModuleType("omni.kit.app")
+    app_module.get_app = lambda: app
+    kit_module = types.ModuleType("omni.kit")
+    kit_module.app = app_module
+    omni_module = types.ModuleType("omni")
+    omni_module.kit = kit_module
+    monkeypatch.setitem(sys.modules, "omni", omni_module)
+    monkeypatch.setitem(sys.modules, "omni.kit", kit_module)
+    monkeypatch.setitem(sys.modules, "omni.kit.app", app_module)
+    result = asyncio.run(spawn(adapter, auto_create_navmesh_volume=True, navmesh_volume_size=[8, 8, 3]))
+    assert result["status"] == "partial"
+    assert result["code"] == "HUMAN_PREREQUISITE_MISSING"
+    assert result["navmesh_volume_created"] is True
+    assert result["navmesh_volume_path"] == "/World/NavMeshVolume"
+
+    from isaac_sim_mcp_extension.command_governance import attach_command_metadata
+    from isaac_sim_mcp_extension.responses import normalize_response
+
+    envelope = attach_command_metadata(
+        normalize_response(result), command_type="humans.spawn", idempotency_key=None, replayed=False
+    )
+    assert envelope["status"] == "partial"
+    assert envelope["data"]["command"]["apply_state"] == "partial"
+    assert envelope["data"]["navmesh_volume_created"] is True
+
+    async def _failed_update():
+        raise RuntimeError("update failed")
+
+    app.next_update_async = _failed_update
+    result = asyncio.run(spawn(adapter, auto_create_navmesh_volume=True, navmesh_volume_size=[8, 8, 3]))
+    assert result["status"] == "partial"
+    assert result["navmesh_volume_path"] == "/World/NavMeshVolume"
+    assert "update failed" in result["message"]
+
+    app.next_update_async = _next_update
+
+    async def _ready_wait(**_kwargs):
+        return {"ready": True, "frames": 1, "reason": "ready", "start_result": True}
+
+    class FakeLoader:
+        def __init__(self, *_args):
+            pass
+
+        async def load(self):
+            return 0
+
+    character.CharacterConfig = types.SimpleNamespace(model_validate=lambda _data: object())
+    randomizer.Randomizer = lambda _seed: object()
+    scene_assembly.CharacterLoader = FakeLoader
+    stage.TraverseAll.return_value = []
+    monkeypatch.setattr(humans, "_wait_for_navmesh", _ready_wait)
+    result = asyncio.run(spawn(adapter, auto_create_navmesh_volume=True, navmesh_volume_size=[8, 8, 3]))
+    assert result["status"] == "partial"
+    assert result["navmesh_volume_created"] is True
+    assert result["created_prim_paths"] == []
+
+    monkeypatch.setattr(humans, "_ensure_navmesh_volume", lambda *_args: ("/World/NavMeshVolume", False))
+    result = asyncio.run(spawn(adapter))
+    assert result["status"] == "error"
+    assert result["side_effects_unknown"] is True
+    envelope = attach_command_metadata(
+        normalize_response(result), command_type="humans.spawn", idempotency_key=None, replayed=False
+    )
+    assert envelope["data"]["command"]["apply_state"] == "unknown"
+
+    def _failed_ensure(*_args):
+        raise RuntimeError("volume operation interrupted")
+
+    monkeypatch.setattr(humans, "_ensure_navmesh_volume", _failed_ensure)
+    result = asyncio.run(spawn(adapter, auto_create_navmesh_volume=True, navmesh_volume_size=[8, 8, 3]))
+    assert result["status"] == "error"
+    assert result["side_effects_unknown"] is True
+    envelope = attach_command_metadata(
+        normalize_response(result), command_type="humans.spawn", idempotency_key=None, replayed=False
+    )
+    assert envelope["data"]["command"]["apply_state"] == "unknown"
+
+    class FailedLoader:
+        def __init__(self, *_args):
+            pass
+
+        async def load(self):
+            raise RuntimeError("loader interrupted")
+
+    scene_assembly.CharacterLoader = FailedLoader
+    monkeypatch.setattr(humans, "_ensure_navmesh_volume", lambda *_args: ("/World/NavMeshVolume", False))
+    result = asyncio.run(spawn(adapter))
+    assert result["status"] == "error"
+    assert result["side_effects_unknown"] is True
+    envelope = attach_command_metadata(
+        normalize_response(result), command_type="humans.spawn", idempotency_key=None, replayed=False
+    )
+    assert envelope["data"]["command"]["apply_state"] == "unknown"

@@ -32,7 +32,7 @@ IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控�
 - 透過 managed artifact 傳輸大型輸出，支援 hash、bounded chunk、TTL 與 cleanup。
 - 提供 command ID、idempotency、policy limit、job、cancel、read-back、rollback 與 redacted diagnostics。
 
-[MCP Tool Inventory](docs/reference/TOOL_INVENTORY.md) 由 source decorators 自動產生；[Tool profiles](docs/reference/TOOL_PROFILES.md) 說明 129-tool 相容模式與 98-tool 合併模式。目前 runtime 支援狀態以 `get_capabilities` 為準。
+[MCP Tool Inventory](docs/reference/TOOL_INVENTORY.md) 由 source decorators 自動產生；[Tool profiles](docs/reference/TOOL_PROFILES.md) 說明相容與合併模式。目前實際工具數與 runtime 支援狀態以當次 `tools/list` 及 `get_capabilities` 為準。
 
 ## 架構
 
@@ -92,10 +92,11 @@ Streamable HTTP 使用另一組設定：
 | `ISAAC_MCP_TRANSPORT` | `stdio` | 設為 `streamable-http` 或 alias `http` 以啟用 HTTP transport。 |
 | `ISAAC_MCP_HTTP_HOST` | `127.0.0.1` | MCP HTTP listener address。 |
 | `ISAAC_MCP_HTTP_PORT` | `8000` | MCP HTTP listener port。 |
-| `ISAAC_MCP_TOOL_PROFILE` | `legacy` | `legacy` 保留既有 129 tools；`consolidated` 提供 98-tool 合併 surface；`full` 僅供遷移與測試。 |
+| `ISAAC_MCP_TOOL_PROFILE` | `legacy` | `legacy` 保留相容工具 surface；`consolidated` 提供合併 surface；`full` 僅供遷移與測試。實際數量以當次 `tools/list` 為準。 |
 | `MCP_ALLOWED_HOSTS` | 未設定 | 額外允許送到 HTTP endpoint 的 exact Host header，以逗號分隔；loopback hosts 永遠保留。 |
 | `ISAAC_MCP_RUNTIME_STATE_FILE` | `%LOCALAPPDATA%\IsaacSim-MCP\runtime-state.json` | Supervisor 與 MCP Server 共用的 bounded crash/restart 狀態檔。 |
 | `ISAAC_MCP_RUNTIME_PROBE_TIMEOUT_SECONDS` | `1` | `get_runtime_status` protocol health probe timeout。 |
+| `ISAAC_MCP_RUNTIME_LOG_FILE` | 自動尋找最新 Kit log | 可選的 Kit log 路徑；`get_runtime_status` 只回傳 bounded、redacted error/crash 摘要。 |
 
 `ISAAC_MCP_HOST=127.0.0.1` 與 `ISAAC_MCP_PORT=8766` 仍屬於 Python MCP Server 和 Isaac Sim Extension 間的 runtime TCP socket。不要把它們改成 HTTP endpoint 設定。
 
@@ -107,9 +108,9 @@ Streamable HTTP 使用另一組設定：
 $env:ISAAC_MCP_TOOL_PROFILE = "consolidated"
 ```
 
-`consolidated` 用 `action` 或 `publisher_type` 合併同一資源的讀寫／控制操作，公開 98 tools。它只調整 MCP tool surface，仍呼叫原本的 Isaac Extension commands。修改 profile 後必須重新啟動 MCP Server，讓 client 重新取得 tool list。完整對照見 [Tool profiles](docs/reference/TOOL_PROFILES.md)。
+`consolidated` 用 `action` 或 `publisher_type` 合併同一資源的讀寫／控制操作。它只調整 MCP tool surface，仍呼叫原本的 Isaac Extension commands。修改 profile 後必須重新啟動 MCP Server，讓 client 重新取得當次 tool list。完整對照見 [Tool profiles](docs/reference/TOOL_PROFILES.md)。
 
-`.env.example` 只列出可用設定，server 不會自動載入它。請在啟動 `python -m isaac_mcp.server` 的同一個 process environment 設定 profile。啟動後可用 MCP `tools/list` 與 `get_capabilities.data.mcp_server` 核對實際公開 surface；`consolidated` 應回報 98 tools。
+`.env.example` 只列出可用設定，server 不會自動載入它。請在啟動 `python -m isaac_mcp.server` 的同一個 process environment 設定 profile。啟動後可用 MCP `tools/list` 與 `get_capabilities.data.mcp_server` 核對實際公開 surface。
 
 ## Running IsaacSim-MCP
 
@@ -124,7 +125,7 @@ Supervisor 會沿用既有 launcher 的 Isaac Sim 6.0.1、Extension、port 與 P
 
 Supervisor 與 MCP Server 是兩個獨立程序。Codex／Claude 仍由 client 用 stdio 啟動 `isaac_mcp.server`；Streamable HTTP 仍用下方命令啟動。Supervisor 狀態預設寫入 `%LOCALAPPDATA%\IsaacSim-MCP\runtime-state.json`，不包含 environment、command source 或 log 內容。
 
-當 Isaac Sim crash、正在重啟或超過 restart budget 時，MCP tools 會回傳 `ISAAC_RUNTIME_RECOVERING`、`ISAAC_RUNTIME_CRASHED` 或 `ISAAC_RUNTIME_UNAVAILABLE`。呼叫 `get_runtime_status` 可在 `8766` 關閉時讀到 exit code、時間、attempt、restart count、health 狀態與建議動作。Connection loss 後不會自動 replay write；runtime 恢復後必須先 read-back，再決定是否用原 idempotency key 重送。
+當 Isaac Sim crash、正在重啟或超過 restart budget 時，MCP tools 會回傳 `ISAAC_RUNTIME_RECOVERING`、`ISAAC_RUNTIME_CRASHED` 或 `ISAAC_RUNTIME_UNAVAILABLE`。呼叫 `get_runtime_status` 可在 `8766` 關閉時讀到 exit code、時間、attempt、restart count、health 狀態、最新 Kit log 的 bounded crash 摘要與建議動作。Connection loss 後不會自動 replay write；runtime 恢復後必須先 read-back，再決定是否用原 idempotency key 重送。
 
 完整 process ownership、state schema、restart budget 與 Agent recovery contract 見 [Runtime supervision 與 crash recovery](docs/concepts/RUNTIME_SUPERVISION.md)。
 
@@ -320,14 +321,16 @@ Funnel 可用，但本機 MCP Server 沒有在 Funnel 指向的 port listening�
 
 這代表 connector 保存的 tool schema 與目前 server profile 不一致。先對實際 HTTP endpoint 執行 MCP `tools/list`，再呼叫 `get_capabilities`：
 
-- `legacy` 應公開 129 tools，包含 `play_simulation`、`open_gripper`、`list_available_robots`。
-- `consolidated` 應公開 98 tools，改用 `control_timeline`、`control_gripper`、`robot_library`。
+- `legacy` 應公開相容工具 surface，包含 `play_simulation`、`open_gripper`、`list_available_robots`。
+- `consolidated` 應公開合併 surface，改用 `control_timeline`、`control_gripper`、`robot_library`。
 
-確認 server process 啟動前已設定 `ISAAC_MCP_TOOL_PROFILE`，重新啟動 server，接著讓 ChatGPT Connector 重新連線並重新取得 tool schema。若 connector migration 期間仍保存舊名稱，可暫時使用 `full` 同時公開新舊名稱；完成 schema 更新後切回 `consolidated`。不要永久使用 `full`，它會把 action space 增加到 151 tools。
+確認 server process 啟動前已設定 `ISAAC_MCP_TOOL_PROFILE`，重新啟動 server，接著讓 ChatGPT Connector 重新連線並重新取得 tool schema。若 connector migration 期間仍保存舊名稱，可暫時使用 `full` 同時公開新舊名稱；完成 schema 更新後切回 `consolidated`。不要永久使用 `full`；目前靜態工具清單為 152 個，實際數量以當次 `tools/list` 為準。
 
 ### `COMMAND_FAILED / Not connected to Isaac`
 
 MCP Server 仍在執行，但 Isaac Sim Extension 沒有回應。改用 `.\scripts\run_isaac_sim_supervised.ps1` 啟動 runtime，並呼叫 `get_runtime_status`。Agent 應依 `availability_code` 處理：`ISAAC_RUNTIME_RECOVERING` 等待 bounded recovery；`ISAAC_RUNTIME_CRASHED` 檢查 `last_crash` 並修正 root cause；`ISAAC_RUNTIME_UNAVAILABLE` 啟動 supervisor。任何 write 在連線中斷後都必須先 read-back，不能盲目重送。
+
+若 crash reporter 尚未退出，supervisor 可能暫時沒有 process exit code。`get_runtime_status` 仍會從最新 Kit log 回傳 `data.runtime.diagnostics.primary_signature` 與 bounded `diagnostic_lines`。預設自動尋找 `%USERPROFILE%\.nvidia-omniverse\logs\Kit`；自訂安裝可設定 `ISAAC_MCP_RUNTIME_LOG_FILE`。完整 log 保留在本機，不會整份傳給 MCP client。
 
 ### `IK_FAILED / physics tensor entity is not valid`
 

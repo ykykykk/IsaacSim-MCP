@@ -985,6 +985,10 @@ async def spawn(
     navmesh_volume_size: Optional[Sequence[float]] = None,
     seed: int = 12345,
 ) -> Dict[str, Any]:
+    navmesh_volume_created = False
+    navmesh_volume_path = None
+    created: list[str] = []
+    side_effects_unknown = False
     try:
         if not isinstance(count, int) or not 1 <= count <= 25:
             return {"status": "error", "message": "count must be an integer from 1 to 25"}
@@ -1027,6 +1031,7 @@ async def spawn(
         from isaacsim.replicator.agent.core.randomizer import Randomizer
         from isaacsim.replicator.agent.core.scene_assembly import CharacterLoader
 
+        side_effects_unknown = auto_create_navmesh_volume
         navmesh_volume_path, navmesh_volume_created = _ensure_navmesh_volume(
             adapter,
             stage,
@@ -1034,6 +1039,7 @@ async def spawn(
             navmesh_volume_center,
             navmesh_volume_size,
         )
+        side_effects_unknown = False
         if navmesh_volume_created:
             import omni.kit.app
 
@@ -1050,7 +1056,7 @@ async def spawn(
         navmesh_result = await _wait_for_navmesh()
         navmesh_bake_frames = navmesh_result["frames"]
         if not navmesh_result["ready"]:
-            return _error(
+            failure = _error(
                 "HUMAN_PREREQUISITE_MISSING",
                 (
                     f"NavMesh baking did not produce a NavMesh after {navmesh_bake_frames} update frames. "
@@ -1068,6 +1074,10 @@ async def spawn(
                     "cancel_result": navmesh_result["cancel_result"],
                 },
             )
+            if navmesh_volume_created:
+                failure["status"] = "partial"
+                failure["navmesh_volume_created"] = True
+            return failure
 
         group_path = f"{root_prim_path.rstrip('/')}/{group_name}"
         before = {
@@ -1095,6 +1105,7 @@ async def spawn(
             config_data["motion_library_path"] = motion_library_path
 
         config = CharacterConfig.model_validate(config_data)
+        side_effects_unknown = True
         loaded = await CharacterLoader(config, Randomizer(seed), stage).load()
         after = {
             str(prim.GetPath())
@@ -1103,10 +1114,11 @@ async def spawn(
             and str(prim.GetPath()).count("/") == group_path.count("/") + 1
         }
         created = sorted(after - before)
+        side_effects_unknown = False
 
         if loaded <= 0 or not created:
             return {
-                "status": "error",
+                "status": "partial" if navmesh_volume_created or created else "error",
                 "message": (
                     "IRA loaded no characters. A baked NavMesh and reachable NVIDIA character/motion assets are required. "
                     "Inspect get_isaac_logs for the exact asset or NavMesh failure. If a valid NavMeshVolume is reported "
@@ -1114,6 +1126,10 @@ async def spawn(
                 ),
                 "ira_extension": _IRA_CORE_ID,
                 "extension_path": extension_path,
+                "navmesh_volume_created": navmesh_volume_created,
+                "navmesh_volume_path": navmesh_volume_path,
+                "created_prim_paths": created,
+                "side_effects_unknown": not bool(created),
             }
 
         behavior_agent_paths = await _refresh_behavior_agents(stage, created)
@@ -1156,4 +1172,14 @@ async def spawn(
             result["warning"] = warning
         return result
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        result = {"status": "error", "message": str(e)}
+        if side_effects_unknown:
+            result["side_effects_unknown"] = True
+        if navmesh_volume_created or created:
+            result.update(
+                status="partial",
+                navmesh_volume_created=navmesh_volume_created,
+                navmesh_volume_path=navmesh_volume_path,
+                created_prim_paths=created,
+            )
+        return result

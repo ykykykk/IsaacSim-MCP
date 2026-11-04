@@ -179,6 +179,11 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
         Script source is omitted by default because inline source and local file
         contents may be large or sensitive.
+
+        Args:
+            graph_path: Absolute USD Prim path of the Action Graph.
+            include_values: Whether to include graph attribute values in the response.
+            include_script_source: Whether to include ScriptNode source text.
         """
         return send(
             "graphs.get_action_graph",
@@ -191,7 +196,12 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("delete_action_graph")
     def delete_action_graph(graph_path: str, preview: bool = True) -> str:
-        """Preview or delete one exact Action Graph, with deletion read-back."""
+        """Preview or delete one exact Action Graph, with deletion read-back.
+
+        Args:
+            graph_path: Absolute USD Prim path of the Action Graph.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send("graphs.delete_action_graph", {"graph_path": graph_path, "preview": preview})
 
     @mcp.tool("connect_action_graph")
@@ -232,7 +242,13 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("set_action_graph_enabled")
     def set_action_graph_enabled(graph_path: str, enabled: bool, preview: bool = True) -> str:
-        """Preview or enable/disable one Action Graph and read back its effective state."""
+        """Preview or enable/disable one Action Graph and read back its effective state.
+
+        Args:
+            graph_path: Absolute USD Prim path of the Action Graph.
+            enabled: Whether the Action Graph should be enabled.
+            preview: When true, validate and report a plan without applying the change.
+        """
         return send(
             "graphs.set_action_graph_enabled",
             {"graph_path": graph_path, "enabled": enabled, "preview": preview},
@@ -240,12 +256,20 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
 
     @mcp.tool("get_action_graph_status")
     def get_action_graph_status(graph_path: str) -> str:
-        """Read one Action Graph's enabled, evaluation, and error status."""
+        """Read one Action Graph's enabled, evaluation, and error status.
+
+        Args:
+            graph_path: Absolute USD Prim path of the Action Graph.
+        """
         return send("graphs.get_action_graph_status", {"graph_path": graph_path})
 
     @mcp.tool("evaluate_action_graph")
     def evaluate_action_graph(graph_path: str) -> str:
-        """Explicitly evaluate one exact Action Graph and return post-evaluation status."""
+        """Explicitly evaluate one exact Action Graph and return post-evaluation status.
+
+        Args:
+            graph_path: Absolute USD Prim path of the Action Graph.
+        """
         return send("graphs.evaluate_action_graph", {"graph_path": graph_path})
 
     @mcp.tool("configure_script_node")
