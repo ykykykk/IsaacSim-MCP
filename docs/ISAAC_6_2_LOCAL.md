@@ -9,6 +9,8 @@
 - 源码与独立 `.venv`：`F:/Resources/Projects/Software/IsaacSim-MCP`。
 - 宿主：`F:/isaac-sim/6.2.0`；实际构建以 `get_capabilities` 为准。
 - `extsUser/isaac.sim.mcp_extension` 联接到本库同名扩展目录。
+- Full 共用 `F:/Documents/Kit/apps/Isaac-Sim Full/user.toml` 使用
+  `${app}/../extsUser`，不再固定搜索 6.1 源码；旧 6.1 的自身联接仍保留。
 - 本机启动器 / Codex 配置：legacy profile，TCP `127.0.0.1:8876`，stdio。
 - 6.2 状态文件：`%LOCALAPPDATA%/IsaacSim-MCP/6.2/runtime-8876.json`。
 - 官方文档 MCP 仍独立运行于 9904；不替换它。旧 6.1 / 6.2 tools 副本保留。
@@ -46,3 +48,10 @@ Capabilities 返回实际宿主 PID 与当前 `/log/file`。健康探针和 capa
 粒子插件的 author 参数默认仍为 True，旧调用行为不变。
 源码变更不是仿真验证；本次仅进行安装所需的工具发现、扩展加载及只读连接检查，
 不打开工程、不播放、不写入配置、不构建物料，不运行测试 / lint / 性能基准。
+
+2026-11-12 空宿主检查完成：实际 `6.2.0-rc.14` / PhysX，扩展 Python
+版本 `0.6.0+bauma.20261112`，134 工具；`get_mpm_status` 返回 stopped / not_built，
+`get_runtime_status` 返回 responsive / endpoint_bound=true；保存到源扩展也已加载。
+初次检查发现 Full 共用配置优先加载 6.1 MCP，修正该配置后完成上述检查。
+证据在本库 `logs/install-host-final-readonly-20261112.json`（本机日志不入 Git）。
+未执行配置写入 / 物料重建；检查进程已关闭，不保留隐藏宿主。
