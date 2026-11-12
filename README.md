@@ -1,82 +1,136 @@
 # IsaacSim-MCP
 
-> 当前代码版本 **0.7.0**：多层 USD 事务、MPM 构建任务、定向保存与领域工具集。
-> [工作流与安装指南](docs/WORKFLOW_6_2.md) · [设计方案](docs/development/ISAAC_6_2_WORKFLOW_PLAN.md)
-> 2026-11-12：MCP 定向离线与 6.2 宿主工作流验收通过，[范围与结果](docs/development/WORKFLOW_6_2_VALIDATION.md)。外部插件及其他工具未据此声明通过。
+通过 MCP，让 AI 客户端控制 NVIDIA Isaac Sim 的场景、机器人、传感器与仿真工作流。
 
-IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控制 NVIDIA Isaac Sim。涵蓋 USD 場景、機器人、感測器、物理、Action Graph、ROS 2、Replicator SDG、動畫人物、NVIDIA 資產與模擬控制。
+**当前版本：0.7.0 · 主要维护环境：Windows / Isaac Sim 6.2**
 
-本地开发目标是 Windows 与 Isaac Sim 6.2；上游历史验证环境主要为 6.0.1，两者证据不混用。本專案延伸自 [whats2000/isaacsim-mcp-server](https://github.com/whats2000/isaacsim-mcp-server)，沿用 MIT License。
+[快速开始](#快速开始) · [功能概览](#功能概览) · [客户端配置](#客户端配置) · [最新验收报告](docs/development/MCP_6_2_ACCEPTANCE.md) · [文档目录](docs/README.md)
 
-## Table of Contents
+## 验收状态
 
-- [核心功能](#核心功能)
-- [架構](#架構)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Running IsaacSim-MCP](#running-isaacsim-mcp)
-- [Remote MCP Access](#remote-mcp-access)
-- [支援版本](#支援版本)
-- [文件入口](#文件入口)
-- [Safety 與 verification](#safety-與-verification)
-- [Troubleshooting](#troubleshooting)
-- [Development](#development)
-- [License](#license)
+2026-11-12，在 **Isaac Sim 6.2.0-rc.14 / Windows / PhysX** 隔离宿主中完成约定范围验收：
 
-## 核心功能
+- **706 项离线测试通过，0 失败**；53 项按实时宿主或 Unix 启动器标记排除。
+- `legacy` 模式 **136 / 138** 个工具已有成功实机覆盖；`full` 模式 **158 / 160** 个工具名已有成功实机覆盖。
+- **USD Search、Beaver3D 未调用、未验收**，不计入通过项。
+- 已修复并复测机器人混合 GPU 场景、Kaya 控制、人物 schema、MPM 任务桥接，以及 ROS 相机和雷达停止后无法重播的问题。
+- MPM 和保存插件仅作为外部提供者参与隔离测试，未修改其源码或正式项目资产。
 
-- 建立、查詢、變形、組合、儲存與驗證 USD Stage。
-- 控制 articulation、joint drive、motion planning、gripper 與 mobile base。
-- 在 Stage／robot replacement 後重建失效的 physics tensor 與 articulation binding，並保持 joint name/value 對應一致。
-- 擷取 Camera RGB 與 typed RTX outputs；RGB 可選擇 MCP-native `ImageContent`，供支援影像內容的遠端 client 顯示或交給 vision model。
-- 建立 PhysX scene、body、collider、joint、PBR material 與 physics material。
-- 管理 Action Graph、ScriptNode、ROS 2 publisher、Replicator SDG job 與 human behavior lifecycle。
-- 透過 managed artifact 傳輸大型輸出，支援 hash、bounded chunk、TTL 與 cleanup。
-- 提供 command ID、idempotency、policy limit、job、cancel、read-back、rollback 與 redacted diagnostics。
+“实机覆盖”包含原生 MCP 调用，以及扩展命令执行、操作后读回与离线路由契约的组合证据；不代表所有参数组合或其他版本都已验证。具体范围见[验收报告](docs/development/MCP_6_2_ACCEPTANCE.md)和[逐项结果](docs/development/MCP_6_2_ACCEPTANCE_RESULTS.json)。
 
-[MCP Tool Inventory](docs/reference/TOOL_INVENTORY.md) 由 source decorators 自動產生；[Tool profiles](docs/reference/TOOL_PROFILES.md) 說明相容與合併模式。目前實際工具數與 runtime 支援狀態以當次 `tools/list` 及 `get_capabilities` 為準。
+## 目录
 
-## 架構
+- [功能概览](#功能概览)
+- [架构](#架构)
+- [快速开始](#快速开始)
+- [客户端配置](#客户端配置)
+- [工具模式与领域过滤](#工具模式与领域过滤)
+- [启动与故障恢复](#启动与故障恢复)
+- [HTTP 与远程访问](#http-与远程访问)
+- [支持范围](#支持范围)
+- [安全与操作边界](#安全与操作边界)
+- [常见问题](#常见问题)
+- [开发与文档](#开发与文档)
+- [许可证与来源](#许可证与来源)
+
+## 功能概览
+
+| 领域 | 能力 |
+|---|---|
+| USD 场景 | 创建、查询、变换、组合、引用、语义标注、类型化属性、多层批处理、保存与受控撤销 |
+| 机器人 | 关节状态与驱动、运动规划、夹爪、移动底盘；处理场景或机器人替换后的运行时重建 |
+| 相机与雷达 | RGB、深度、分割等相机输出，RTX LiDAR 点云；原生 MCP 图片和大型数据传输 |
+| 物理与材质 | PhysX 场景、刚体、碰撞体、碰撞组、关节、PBR 材质和物理材质 |
+| 图与 ROS 2 | Action Graph、ScriptNode，以及 Clock、TF、JointState、相机和雷达发布器 |
+| 合成数据与人物 | Replicator SDG 任务、NavMesh、人物生成、移动、注视、空闲及行为控制 |
+| 可选 MPM 桥接 | 配置发现与对比、Session 参数修改、版本校验、异步构建与任务状态 |
+| 可选源文件保存桥接 | 预览并提交选定的 Session 默认值到一个源文件，保留无关覆盖 |
+| 诊断与治理 | 命令 ID、幂等控制、任务取消、操作后读回、回滚、脱敏日志和崩溃恢复状态 |
+
+**本仓库只维护 MCP。** MPM 求解器和保存插件是独立项目，不随本仓库安装，也不会被工具自动安装或启用。缺少提供者时返回明确错误，不影响其他领域。
+
+[工具清单](docs/reference/TOOL_INVENTORY.md)由源码自动生成；实际可用工具以当前 `tools/list` 和 `get_capabilities` 为准。
+
+## 架构
 
 ```text
-LLM → Skill → MCP Server → TCP → Isaac Extension → Handler → Adapter → Isaac Sim
+AI 客户端 → Python MCP 服务 → TCP → Isaac Sim 扩展 → 处理器 → 适配器 → Isaac Sim
 ```
 
 ```mermaid
 flowchart LR
-    A[LLM / MCP Client] --> B[Project Skill]
-    B --> C[Python MCP Server]
-    C -->|127.0.0.1:8766| D[Isaac Sim Extension]
-    D --> E[Handler]
-    E --> F[V5 / V6 Adapter]
-    F --> G[Isaac Sim / USD / PhysX]
+    A[AI / MCP 客户端] -->|stdio 或 Streamable HTTP| B[Python MCP 服务]
+    B -->|本地 TCP| C[Isaac Sim 扩展]
+    C --> D[命令处理器]
+    D --> E[V5 / V6 适配器]
+    E --> F[Isaac Sim / USD / PhysX]
 ```
 
-各層責任、request lifecycle、runtime routes 與權威來源見 [ARCHITECTURE.md](ARCHITECTURE.md)。
+MCP 服务与 Isaac Sim 是独立进程：客户端启动 MCP 服务，Isaac Sim 内的扩展执行场景操作。详细分工见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
-## Installation
+## 快速开始
 
-安裝 MCP Server：
+准备完整的 Isaac Sim 6.2 安装，以及 Python 3.10 或更新版本。MCP 服务使用独立 Python 环境；扩展使用 Isaac Sim 自带环境。
+
+### 1. 安装 MCP 服务
 
 ```powershell
 git clone https://github.com/ykykykk/IsaacSim-MCP.git
 cd IsaacSim-MCP
-py -3.10 -m venv .venv
+python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
 
-Windows 的完整環境需求與安裝方式見 [Windows 安裝指南](docs/getting-started/INSTALLATION_WINDOWS.md)。
+### 2. 配置本机路径与端口
 
-## Configuration
+```powershell
+Copy-Item config.example.json config.local.json
+```
 
-stdio 是預設 transport。Codex／Claude Desktop 可以沿用現有設定，不需要新增 HTTP 環境變數：
+编辑 `config.local.json`，例如：
+
+```json
+{
+  "isaac_root": "F:/isaac-sim/6.2.0",
+  "host": "127.0.0.1",
+  "port": 8766,
+  "tool_profile": "legacy",
+  "tool_domains": "all"
+}
+```
+
+安装路径是示例，请按本机实际位置填写。端口必须与 Isaac Sim 扩展一致；已有配置使用其他端口时，不必改回 8766。`config.local.json` 不提交 Git。
+
+配置优先级：**显式启动参数 > 环境变量 > 配置文件 > 通用默认值**。可用 `ISAAC_MCP_CONFIG` 指定另一个配置文件；`.env.example` 仅供参考，不会自动加载。
+
+### 3. 启动 Isaac Sim
+
+```powershell
+.\scripts\run_isaac_sim.ps1
+```
+
+启动器根据配置加载本仓库扩展，并显式传递连接端口。需要进程监督与异常恢复时，改用：
+
+```powershell
+.\scripts\run_isaac_sim_supervised.ps1
+```
+
+### 4. 连接客户端
+
+按下一节配置 MCP 客户端。连接后先调用 `get_capabilities`，再调用 `get_scene_info`，确认宿主版本、扩展来源及当前场景，再执行修改。
+
+详细安装说明见 [Windows 安装指南](docs/getting-started/INSTALLATION_WINDOWS.md)；6.2 配置及工作流契约见 [6.2 工作流指南](docs/WORKFLOW_6_2.md)。历史验收结论以本页链接的最新报告为准。
+
+## 客户端配置
+
+默认使用 **stdio**，不需要 HTTP 或公网入口。支持 `mcpServers` 格式的客户端可参考：
 
 ```json
 {
   "mcpServers": {
     "isaac-sim-live": {
-      "command": "F:\\IsaacSim-MCP\\.venv\\Scripts\\python.exe",
+      "command": "F:\\Resources\\Projects\\Software\\IsaacSim-MCP\\.venv\\Scripts\\python.exe",
       "args": ["-m", "isaac_mcp.server"],
       "env": {
         "ISAAC_MCP_HOST": "127.0.0.1",
@@ -87,51 +141,63 @@ stdio 是預設 transport。Codex／Claude Desktop 可以沿用現有設定，�
 }
 ```
 
-Streamable HTTP 使用另一組設定：
+将 `command` 改为仓库虚拟环境的绝对路径，端口与宿主保持一致。不同客户端的配置文件格式可能不同，但启动命令和参数相同。
 
-| Variable | Default | Purpose |
+| 环境变量 | 默认值 | 用途 |
 |---|---|---|
-| `ISAAC_MCP_TRANSPORT` | `stdio` | 設為 `streamable-http` 或 alias `http` 以啟用 HTTP transport。 |
-| `ISAAC_MCP_HTTP_HOST` | `127.0.0.1` | MCP HTTP listener address。 |
-| `ISAAC_MCP_HTTP_PORT` | `8000` | MCP HTTP listener port。 |
-| `ISAAC_MCP_TOOL_PROFILE` | `legacy` | `legacy` 保留相容工具 surface；`consolidated` 提供合併 surface；`full` 僅供遷移與測試。實際數量以當次 `tools/list` 為準。 |
-| `MCP_ALLOWED_HOSTS` | 未設定 | 額外允許送到 HTTP endpoint 的 exact Host header，以逗號分隔；loopback hosts 永遠保留。 |
-| `ISAAC_MCP_RUNTIME_STATE_FILE` | `%LOCALAPPDATA%\IsaacSim-MCP\6.2\runtime-<port>.json` | Supervisor 與 MCP Server 共用的 bounded crash/restart 狀態檔。 |
-| `ISAAC_MCP_RUNTIME_PROBE_TIMEOUT_SECONDS` | `1` | `get_runtime_status` protocol health probe timeout。 |
-| `ISAAC_MCP_RUNTIME_LOG_FILE` | 自動尋找最新 Kit log | 可選的 Kit log 路徑；`get_runtime_status` 只回傳 bounded、redacted error/crash 摘要。 |
+| `ISAACSIM_ROOT` | 由本机配置指定 | Isaac Sim 安装目录 |
+| `ISAAC_MCP_CONFIG` | 仓库 `config.local.json` | 配置文件路径 |
+| `ISAAC_MCP_HOST` | `127.0.0.1` | Isaac Sim 扩展的 TCP 地址 |
+| `ISAAC_MCP_PORT` | `8766` | Isaac Sim 扩展的 TCP 端口 |
+| `ISAAC_MCP_TOOL_PROFILE` | `legacy` | 工具名称与接口模式 |
+| `ISAAC_MCP_TOOL_DOMAINS` | `all` | 工具领域过滤 |
+| `ISAAC_MCP_TRANSPORT` | `stdio` | MCP 传输方式 |
 
-`ISAAC_MCP_HOST=127.0.0.1` 與 `ISAAC_MCP_PORT=8766` 仍屬於 Python MCP Server 和 Isaac Sim Extension 間的 runtime TCP socket。不要把它們改成 HTTP endpoint 設定。
+## 工具模式与领域过滤
 
-### Tool profiles
+工具模式控制名称和接口：
 
-預設 `legacy` 不改任何既有 tool name 或 schema。ChatGPT 等需要較小 action space 的 client，可在啟動 MCP Server 前設定：
+- **`legacy`**：默认模式，保留既有工具名称和参数契约。
+- **`consolidated`**：使用 `action`、`publisher_type` 等参数合并同类操作，减少客户端工具数量。
+- **`full`**：同时暴露两套名称，供迁移和测试使用，不建议长期使用。
+
+领域过滤独立于工具模式：
+
+| 领域 | 内容 |
+|---|---|
+| `core` | 诊断、任务、产物与仿真控制；始终保留 |
+| `scene` | USD、物体、材质、灯光、资产、图与保存 |
+| `physics` | 物理配置与构建 |
+| `robotics` | 机器人、控制器、运动、传感器与 ROS 2 |
+| `mpm` | 可选 MPM 桥接 |
+| `sdg` | Replicator 与人物 |
+
+例如只开放场景和物理相关工具：
 
 ```powershell
 $env:ISAAC_MCP_TOOL_PROFILE = "consolidated"
+$env:ISAAC_MCP_TOOL_DOMAINS = "core,scene,physics"
 ```
 
-`consolidated` 用 `action` 或 `publisher_type` 合併同一資源的讀寫／控制操作。它只調整 MCP tool surface，仍呼叫原本的 Isaac Extension commands。修改 profile 後必須重新啟動 MCP Server，讓 client 重新取得當次 tool list。完整對照見 [Tool profiles](docs/reference/TOOL_PROFILES.md)。
+修改后重新启动 MCP 服务，并让客户端重新获取工具列表。完整名称对照见[工具模式说明](docs/reference/TOOL_PROFILES.md)。
 
-`.env.example` 只列出可用設定，server 不會自動載入它。請在啟動 `python -m isaac_mcp.server` 的同一個 process environment 設定 profile。啟動後可用 MCP `tools/list` 與 `get_capabilities.data.mcp_server` 核對實際公開 surface。
+## 启动与故障恢复
 
-## Running IsaacSim-MCP
+监督启动器沿用本机路径、扩展、端口及物理 GPU 选择策略。默认在 300 秒窗口内最多重启 3 次，采用递增等待；退出码为 `0` 时视为正常关闭，不自动重开。若已存在健康宿主，或端口被无响应进程占用，会拒绝重复启动。
 
-建議用 supervisor 啟動 Isaac Sim 與 Extension：
+MCP 服务仍由客户端独立启动。`get_runtime_status` 可在 Isaac Sim 不可连接时读取最后已知退出状态、重启次数及脱敏日志摘要：
 
-```powershell
-$env:ISAACSIM_ROOT = "C:\isaacsim"
-.\scripts\run_isaac_sim_supervised.ps1
-```
+- `ISAAC_RUNTIME_RECOVERING`：正在恢复，等待后再查询。
+- `ISAAC_RUNTIME_CRASHED`：已崩溃，先检查原因。
+- `ISAAC_RUNTIME_UNAVAILABLE`：宿主不可用，检查启动器与配置。
 
-Supervisor 會沿用既有 launcher 的 Isaac Sim 6.0.1、Extension、port 與 Physics GPU guard。非零 exit code 視為異常退出，預設最多在 300 秒內重啟 3 次並使用 exponential backoff；exit code `0` 視為正常關閉，不會自動重開。啟動前若 protocol health probe 已找到健康 runtime，或 `8766` 已被無回應程序占用，supervisor 都會拒絕再啟動一份 Isaac Sim。需要 one-shot 行為時仍可使用 `.\scripts\run_isaac_sim.ps1`。
+**断线后不自动重放写操作。** 恢复连接后先读回状态，确认前一次操作是否生效，再决定下一步。
 
-Supervisor 與 MCP Server 是兩個獨立程序。Codex／Claude 仍由 client 用 stdio 啟動 `isaac_mcp.server`；Streamable HTTP 仍用下方命令啟動。Supervisor 狀態預設寫入 `%LOCALAPPDATA%\IsaacSim-MCP\6.2\runtime-<port>.json`，不包含 environment、command source 或 log 內容。
+状态文件默认位于 `%LOCALAPPDATA%\IsaacSim-MCP\6.2\runtime-<port>.json`。可通过 `ISAAC_MCP_RUNTIME_STATE_FILE` 和 `ISAAC_MCP_RUNTIME_LOG_FILE` 指定状态文件及 Kit 日志位置。详情见[运行监督与崩溃恢复](docs/concepts/RUNTIME_SUPERVISION.md)。
 
-當 Isaac Sim crash、正在重啟或超過 restart budget 時，MCP tools 會回傳 `ISAAC_RUNTIME_RECOVERING`、`ISAAC_RUNTIME_CRASHED` 或 `ISAAC_RUNTIME_UNAVAILABLE`。呼叫 `get_runtime_status` 可在 `8766` 關閉時讀到 exit code、時間、attempt、restart count、health 狀態、最新 Kit log 的 bounded crash 摘要與建議動作。Connection loss 後不會自動 replay write；runtime 恢復後必須先 read-back，再決定是否用原 idempotency key 重送。
+## HTTP 与远程访问
 
-完整 process ownership、state schema、restart budget 與 Agent recovery contract 見 [Runtime supervision 與 crash recovery](docs/concepts/RUNTIME_SUPERVISION.md)。
-
-本機 Codex／Claude Desktop 會依上一節設定，以 stdio 自動啟動 MCP Server。需要 Streamable HTTP 時，在另一個 PowerShell session 啟動：
+本地 stdio 是默认方案。确需 Streamable HTTP 时，在单独的 PowerShell 中启动：
 
 ```powershell
 $env:ISAAC_MCP_TRANSPORT = "streamable-http"
@@ -139,117 +205,95 @@ $env:ISAAC_MCP_HTTP_HOST = "127.0.0.1"
 $env:ISAAC_MCP_HTTP_PORT = "8000"
 $env:ISAAC_MCP_TOOL_PROFILE = "consolidated"
 $env:MCP_ALLOWED_HOSTS = "localhost,127.0.0.1"
-
 .\.venv\Scripts\python.exe -m isaac_mcp.server
 ```
 
-MCP HTTP endpoint 是 `http://127.0.0.1:8000/mcp`。先呼叫 `get_capabilities`，再呼叫 `get_scene_info`，確認 runtime 與 Stage 後才執行 write。
+MCP 地址为 `http://127.0.0.1:8000/mcp`。HTTP 的 8000 端口与扩展 TCP 的 8766 端口用途不同，不能混用。
 
-## Remote MCP Access
+**现有 HTTP 服务没有身份认证。Host 校验不等于认证，不要直接公开端口或通过无认证隧道暴露控制接口。** 远程部署需要独立配置认证、授权及访问审计，本仓库不自动部署公网服务。
 
-默认使用本地 stdio，不需要 HTTP、Funnel 或公网入口。
-现有 HTTP transport 没有身份认证；Host 校验不等于认证，不能作为公开控制接口直接部署。
-本版不部署公网服务。如确需远程访问，应先独立配置认证、授权和访问审计；不要把未认证端口公开。
+## 支持范围
 
-## 支援版本
-
-| Component | 狀態 |
+| 组件 | 当前状态 |
 |---|---|
-| Isaac Sim 6.0.1 on Windows | 主要驗證 runtime |
-| PhysX | 透過 V6 adapter 與 guarded live verifier 支援 |
-| Newton | 只有 active backend matrix 回報 supported 且 verified 的功能才能使用，其餘 fail closed |
-| Isaac Sim 5.1.x | Legacy adapter；不在目前 6.0.1 release gate 範圍 |
-| Isaac Lab MCP | 明確延後，與目前 Isaac Sim MCP 分開處理 |
+| Isaac Sim 6.2 / Windows | 当前维护目标；最新实机验收构建为 6.2.0-rc.14 |
+| PhysX | 当前实机验收后端 |
+| Isaac Sim 6.0.1 / Windows | 保留上游历史验证记录，不与 6.2 证据混用 |
+| Isaac Sim 5.1.x | 保留旧版适配器，不在本轮验收范围 |
+| Newton | 仅使用当前能力矩阵明确支持的功能；未纳入本轮 PhysX 验收 |
+| MPM / 保存插件 | 可选外部提供者；本轮验证 MCP 桥接，不代表生产规模性能或求解精度验收 |
+| USD Search / Beaver3D | 可选外部服务；本轮未调用、未验收 |
+| Isaac Lab MCP | 独立范围，尚未纳入本项目 |
 
-Package、extension、response、capability 與 backend-matrix version 各有獨立相容規則，見 [Protocol versions 與 migration](docs/concepts/PROTOCOL_VERSIONING_AND_MIGRATION.md)。
+软件包、扩展、响应格式和能力矩阵使用独立版本规则，见[协议版本与迁移](docs/concepts/PROTOCOL_VERSIONING_AND_MIGRATION.md)。
 
-## 文件入口
+## 安全与操作边界
 
-從 [docs/README.md](docs/README.md) 開始：
+- `isaac-sim-live` 才是实时场景控制通道；文档查询不能证明场景已经改变。
+- 写入须满足时间轴、后端、扩展、对象归属及路径条件；破坏性验收仅限明确指定的临时场景。
+- 工具出现在列表中不等于功能通过；验收需要执行结果、操作后读回及清理证据。
+- 优先使用具名工具。`execute_script` / `reload_script` 只应执行可信代码，并受执行策略限制。
+- 参数修改、构建、播放、内存提交与磁盘保存是不同操作，不互相隐式触发。
+- API 密钥不应写入源码、聊天中的 MCP 参数、报告或 Git 提交。
+- 本仓库不接管其他插件源码，不自动修改用户正式场景。
 
-- `getting-started/`：安裝與第一次連線。
-- `concepts/`：protocol、transport、governance 與 job 共用模型。
-- `reference/`：目前 API 與 capability 契約。
-- `development/`：測試、scratch-stage 與 release 流程。
-- `research/`：有日期的 1.x～6.x tasks 與 verification snapshots。
+## 常见问题
 
-Agent 工作流程在 [.agents/skills/omniverse-windows-workspace/SKILL.md](.agents/skills/omniverse-windows-workspace/SKILL.md)。Tool、version 與 capability 的權威來源見 [Authority and Generated Metadata](docs/reference/AUTHORITY.md)。
-Agent 的 retry、reconnect、read-back 與 fail-closed 行為見 [Error Codes and Agent Recovery](docs/reference/ERROR_CODES.md)。
-Robot articulation、physics tensor、joint mapping、DriveAPI 與 IK lifecycle 見 [Robot Runtime Lifecycle](docs/reference/ROBOT_RUNTIME_LIFECYCLE.md)。
+### 无法连接 Isaac Sim
 
-## Safety 與 verification
+确认宿主已启动、扩展已加载，且客户端和宿主使用相同 TCP 地址与端口。调用 `get_runtime_status` 查看退出或恢复状态。不要把 `ISAAC_MCP_PORT` 填成 HTTP 服务端口。
 
-- `isaac-sim-live` 透過 TCP `8766` 控制 Stage；documentation MCP 無法證明 live Stage 已改變。
-- Write 必須通過 timeline、backend、extension、ownership 與 path prerequisites。Destructive verification 只允許 exact scratch Stage 與 MCP-owned namespace。
-- Registry presence 只證明 tool 可發現。Live pass 必須有 operation-specific read-back 與 cleanup evidence。
-- `execute_script`／`reload_script` 只接受可信任程式碼，且受 policy 限制；優先使用 named tools。
-- API keys 只供外部資產 provider 選用，不可寫入 source、MCP JSON、report 或 commit。
-- Release 前建立 verified backup 並執行 strict [release gate](docs/development/RELEASE_GATE.md)。Commit 與 push 仍需使用者明確授權。
+若崩溃报告程序尚未退出，可能暂时没有退出码；运行时诊断仍可提供最新 Kit 日志的有限摘要。完整日志保留在本机。
 
-## Troubleshooting
+### 工具显示正常，调用却返回 `Unknown tool`
 
-### `421 Misdirected Request / Invalid Host header`
+客户端缓存的工具列表可能与当前模式不一致。确认 `ISAAC_MCP_TOOL_PROFILE` 和 `ISAAC_MCP_TOOL_DOMAINS`，重启服务并重新连接客户端。
 
-Tailscale Funnel 已成功轉發，但 Funnel hostname 尚未被 MCP Server 信任。把完整 hostname 加入 `MCP_ALLOWED_HOSTS`，例如：
+例如 `legacy` 使用 `play_simulation`、`open_gripper`，`consolidated` 使用 `control_timeline`、`control_gripper`。迁移期间可临时使用 `full`，完成后切回所需模式。
 
-```powershell
-$env:MCP_ALLOWED_HOSTS = "localhost,127.0.0.1,your-device.your-tailnet.ts.net"
-```
+### 相机成功返回，但客户端没有显示图片
 
-不要使用 `.ts.net` 或 `*.ts.net`；FastMCP 只接受設定中的 exact hostname。專案會自動接受該 hostname 有 port 與無 port 的形式。
+使用 RGB `capture_camera_output(..., output_type="rgb", return_mode="image")` 或 `capture_image(..., return_mode="image")`。`artifact` 返回受管理的数据句柄，`inline` 返回 JSON 中的 base64，均不等同于原生 MCP `ImageContent`。
 
-### `502 Bad Gateway`
+若响应已有 `ImageContent`，但界面仍不显示，需检查客户端是否支持图片内容。若收到 `CAMERA_FRAME_NOT_READY`，先检查相机、时间轴与渲染状态，不在单次请求中无限重试。
 
-Funnel 可用，但本機 MCP Server 沒有在 Funnel 指向的 port listening。確認 `ISAAC_MCP_HTTP_PORT` 與 `tailscale funnel --bg 8000` 的 port 相同，並保持 MCP Server process 執行中。
+### 机器人替换后出现无效物理张量或 IK 错误
 
-### Connection timeout
+当前实现会在场景或机器人身份变化后丢弃旧绑定，并重建失效的物理运行时。若仍报错，确认 MCP 服务与扩展来自同一版本，重新启动 Isaac Sim 后读回关节配置。不要用反复播放、暂停或盲目重发写命令代替诊断。
 
-執行 `tailscale funnel status`，確認 Funnel 仍啟用，再檢查 firewall 與 Tailscale connection 狀態。
+### ROS 2 发布器或可选插件不可用
 
-### Works locally but ChatGPT cannot connect
+先查询 `get_ros2_status` 或 `get_capabilities`。ROS 2 需要启用 bridge、core、nodes 扩展；MPM 和源保存需要各自外部提供者。工具不会替用户自动启用插件。
 
-確認公開 URL 使用 HTTPS 且以 `/mcp` 結尾，並確認使用 Tailscale Funnel。Tailscale Serve 只有 tailnet 內部可達，ChatGPT 無法透過它連線。
+### HTTP 返回 `421 Misdirected Request`
 
-### Camera 成功但 ChatGPT 沒有顯示圖片
+请求的 Host 不在允许列表中。`MCP_ALLOWED_HOSTS` 接受逗号分隔的精确主机名，不接受 `*.example.com` 这类通配符。调整 Host 列表不会为服务增加身份认证。
 
-確認呼叫的是 RGB `capture_camera_output(..., return_mode="image")` 或 `capture_image(..., return_mode="image")`。`artifact` 只回 managed handle，`inline` 只把 base64 放進 JSON；兩者都不是 MCP-native image content。若 response 已含 `ImageContent`，但 UI 仍無圖片，代表目前 client 沒有渲染或轉交該 content block；保留 artifact handle 作為下載路徑，並把結果標記為 client-side partial support。
+## 开发与文档
 
-若 response 是 `CAMERA_FRAME_NOT_READY`，代表 Server 已用完最多 3 次 capture 與 1 秒 warm-up wait。確認 Camera prim、timeline 與 render runtime 正常，再建立新的 capture attempt；不要在單次 request 內無限重播。
-
-### ChatGPT 顯示 legacy tools，但呼叫回 `Unknown tool`
-
-這代表 connector 保存的 tool schema 與目前 server profile 不一致。先對實際 HTTP endpoint 執行 MCP `tools/list`，再呼叫 `get_capabilities`：
-
-- `legacy` 應公開相容工具 surface，包含 `play_simulation`、`open_gripper`、`list_available_robots`。
-- `consolidated` 應公開合併 surface，改用 `control_timeline`、`control_gripper`、`robot_library`。
-
-確認 server process 啟動前已設定 `ISAAC_MCP_TOOL_PROFILE`，重新啟動 server，接著讓 ChatGPT Connector 重新連線並重新取得 tool schema。若 connector migration 期間仍保存舊名稱，可暫時使用 `full` 同時公開新舊名稱；完成 schema 更新後切回 `consolidated`。不要永久使用 `full`；目前靜態工具清單為 152 個，實際數量以當次 `tools/list` 為準。
-
-### `COMMAND_FAILED / Not connected to Isaac`
-
-MCP Server 仍在執行，但 Isaac Sim Extension 沒有回應。改用 `.\scripts\run_isaac_sim_supervised.ps1` 啟動 runtime，並呼叫 `get_runtime_status`。Agent 應依 `availability_code` 處理：`ISAAC_RUNTIME_RECOVERING` 等待 bounded recovery；`ISAAC_RUNTIME_CRASHED` 檢查 `last_crash` 並修正 root cause；`ISAAC_RUNTIME_UNAVAILABLE` 啟動 supervisor。任何 write 在連線中斷後都必須先 read-back，不能盲目重送。
-
-若 crash reporter 尚未退出，supervisor 可能暫時沒有 process exit code。`get_runtime_status` 仍會從最新 Kit log 回傳 `data.runtime.diagnostics.primary_signature` 與 bounded `diagnostic_lines`。預設自動尋找 `%USERPROFILE%\.nvidia-omniverse\logs\Kit`；自訂安裝可設定 `ISAAC_MCP_RUNTIME_LOG_FILE`。完整 log 保留在本機，不會整份傳給 MCP client。
-
-### `IK_FAILED / physics tensor entity is not valid`
-
-目前版本會在 Stage 或 robot identity 改變後丟棄舊 articulation wrapper，並重建 invalid Physics SimulationView。若仍看到此訊息，先確認 MCP Server 與 Isaac Extension 都來自同一個最新 checkout，再重新啟動 Isaac Sim 載入新 Extension。不要用重複 Play/Pause 當成修復，也不要重送未確認結果的 write。
-
-### `PhysicsDriveAPI, a non-empty instance name must be provided`
-
-目前 USD fallback 會依 joint type 使用 `angular` 或 `linear` DriveAPI instance。若舊 runtime 仍回此錯誤，重新啟動 Isaac Sim 以載入更新後的 Extension，接著先用 `get_joint_config` 做 read-only 驗證。
-
-## Development
+开发依赖使用 `uv sync --dev` 安装。需要主动运行离线检查时：
 
 ```powershell
-uv sync --dev
-uv run pytest -q -m "not live and not windows_launcher and not unix_launcher" -k "not test_detect_version_returns_zero_on_failure"
+$env:PYTHONUTF8 = "1"
+$env:ISAAC_MCP_TOOL_DOMAINS = "all"
+$env:ISAAC_MCP_TOOL_PROFILE = "legacy"
+uv run pytest -q -m "not live and not unix_launcher"
 uv run ruff check .
-.\.venv\Scripts\python.exe .\scripts\generate_tool_inventory.py --check
 ```
 
-Live tests 是 opt-in，並受 [scratch-stage harness](docs/development/LIVE_TEST_HARNESS.md) 保護。禁止對使用者 Stage 執行 legacy destructive integration suite。
+以上为 Windows 离线验收命令。实机测试需另行显式启用，并使用[隔离场景测试框架](docs/development/LIVE_TEST_HARNESS.md)；禁止把历史破坏性测试指向正在编辑的用户场景。
 
-## License
+常用文档：
 
-本專案使用 [MIT License](LICENSE)。散布修改版時需保留授權、copyright notices 與 upstream attribution。
+- [最新 6.2 验收报告](docs/development/MCP_6_2_ACCEPTANCE.md)
+- [6.2 工作流与安装配置](docs/WORKFLOW_6_2.md)
+- [文档目录](docs/README.md)
+- [工具清单](docs/reference/TOOL_INVENTORY.md)与[工具模式](docs/reference/TOOL_PROFILES.md)
+- [架构](ARCHITECTURE.md)与[信息权威来源](docs/reference/AUTHORITY.md)
+- [错误码与恢复规则](docs/reference/ERROR_CODES.md)
+- [机器人运行时生命周期](docs/reference/ROBOT_RUNTIME_LIFECYCLE.md)
+- [开发代理工作约定](.agents/skills/omniverse-windows-workspace/SKILL.md)
+
+## 许可证与来源
+
+本项目基于 [Tim0320/IsaacSim-MCP](https://github.com/Tim0320/IsaacSim-MCP)，延续 [whats2000/isaacsim-mcp-server](https://github.com/whats2000/isaacsim-mcp-server) 的工作，使用 [MIT 许可证](LICENSE)。分发修改版时请保留许可证、版权声明与上游归属。
