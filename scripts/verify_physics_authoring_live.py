@@ -23,7 +23,7 @@ def _readback(response: dict) -> dict:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     evidence = {}
     remove_generated_ground_plane = False
     try:

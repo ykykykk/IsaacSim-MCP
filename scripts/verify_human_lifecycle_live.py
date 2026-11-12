@@ -73,7 +73,7 @@ def _distance(a: list[float], b: list[float]) -> float:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     evidence: dict = {}
     human_path = None
     original_paths: list[str] = []

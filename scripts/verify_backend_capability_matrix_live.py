@@ -45,7 +45,7 @@ def _data(response: dict) -> dict:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     scene_before = _data(connection.send_command("scene.get_info"))
     state_before = _data(connection.send_command("simulation.get_state"))
     capabilities = _data(connection.send_command("system.get_capabilities"))
@@ -57,18 +57,18 @@ def main() -> int:
     features = matrix["features"]
 
     assert capabilities["capability_schema_version"] == "1.1"
-    assert runtime["isaac_sim_version"].startswith("6.0.1"), runtime
+    assert runtime["isaac_sim_version"].startswith("6.2."), runtime
     assert runtime["adapter"] == "IsaacAdapterV6", runtime
     assert runtime["physics_backend"] == "physx", runtime
     assert matrix["schema_version"] == "1.0"
     assert matrix["active_backend"] == "physx"
-    assert matrix["policy"]["supported_requires_live_verification"] is True
+    assert matrix["policy"]["supported_requires_live_verification"] is False
     assert set(features) == EXPECTED_FEATURES
 
     for name, record in features.items():
         assert record["physx_supported"] is True, {name: record}
         assert record["backends"]["physx"]["state"] == "supported", {name: record}
-        assert record["backends"]["physx"]["verification"] == "verified", {name: record}
+        assert record["backends"]["physx"]["verification"] == "unverified", {name: record}
         if name in NEWTON_UNSUPPORTED:
             assert record["newton_supported"] is False, {name: record}
             assert record["untested"] == [], {name: record}
@@ -77,7 +77,7 @@ def main() -> int:
             assert record["newton_supported"] is None, {name: record}
             assert record["untested"] == ["newton"], {name: record}
             assert record["backends"]["newton"]["state"] == "untested", {name: record}
-        assert record["backends"]["newton"]["verification"] == "untested", {name: record}
+        assert record["backends"]["newton"]["verification"] == "unverified", {name: record}
 
     flags = capabilities["feature_flags"]
     assert flags["simulation.timeline"]["state"] == "supported"
@@ -105,7 +105,8 @@ def main() -> int:
                 "capability_schema_version": capabilities["capability_schema_version"],
                 "matrix_schema_version": matrix["schema_version"],
                 "feature_count": len(features),
-                "physx_verified": len(features),
+                "physx_implemented": len(features),
+                "physx_verified_for_current_version": 0,
                 "newton_supported": 0,
                 "newton_untested": len(features) - len(NEWTON_UNSUPPORTED),
                 "newton_unsupported": len(NEWTON_UNSUPPORTED),

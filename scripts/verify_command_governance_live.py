@@ -40,13 +40,13 @@ def _wait_stage(connection: IsaacConnection, timeout_s: float = 60.0) -> None:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     evidence: dict = {}
     try:
         _wait_stage(connection)
         _data(connection.send_command("simulation.stop"))
         capabilities = _data(connection.send_command("system.get_capabilities"))
-        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.0.1"), capabilities["runtime"]
+        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.2."), capabilities["runtime"]
         assert capabilities["extension"]["command_count"] == extension_tool_count(), capabilities["extension"]
         assert capabilities["feature_flags"]["execute_script"]["state"] == "supported"
         assert capabilities["feature_flags"]["command.governance"]["state"] == "supported"
@@ -167,12 +167,12 @@ def main() -> int:
             evidence["timeline_after_cleanup"] = _data(connection.send_command("simulation.get_state"))[
                 "timeline_state"
             ]
-            evidence["port_8766_open"] = _port_open(8766)
+            evidence["configured_port_open"] = _port_open(connection.port)
             connection.disconnect()
 
     assert evidence["root_absent_after_cleanup"] is True, evidence
     assert evidence["timeline_after_cleanup"] == "stopped", evidence
-    assert evidence["port_8766_open"] is True, evidence
+    assert evidence["configured_port_open"] is True, evidence
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0
 

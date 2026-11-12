@@ -34,7 +34,7 @@ def test_readme_is_a_compact_entrypoint_and_routes_the_documentation_hierarchy()
     assert "research/ALL_TOOLS_TEST_RESULTS.json" in docs_index
     assert "research/ISAACSIM_MCP_6_0_1_IMPLEMENTATION_TASK.md" in docs_index
     assert '"isaac-sim-live"' in readme
-    assert "https://github.com/Tim0320/IsaacSim-MCP.git" in readme
+    assert "https://github.com/ykykykk/IsaacSim-MCP.git" in readme
 
 
 def test_architecture_documents_the_complete_control_chain():

@@ -1289,6 +1289,7 @@ def test_v6_camera_output_attaches_annotator_once_and_reuses_sensor(monkeypatch)
     monkeypatch.setitem(sys.modules, "isaacsim.sensors.experimental.rtx", rtx)
     sensor = _Sensor()
     adapter._camera_sensors["/World/Cam"] = sensor
+    monkeypatch.setattr(adapter._sensor_runtime, "_camera_frame_ready", lambda: True)
 
     first = adapter.capture_camera_output("/World/Cam", "normals")
     second = adapter.capture_camera_output("/World/Cam", "normals")

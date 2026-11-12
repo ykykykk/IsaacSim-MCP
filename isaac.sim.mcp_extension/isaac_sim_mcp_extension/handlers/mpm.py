@@ -3,8 +3,9 @@
 import hashlib
 import json
 from functools import partial
-from ..workflow_context import context
+
 from .. import usd_transactions as transactions
+from ..workflow_context import context
 
 
 class MPMRequestError(ValueError):

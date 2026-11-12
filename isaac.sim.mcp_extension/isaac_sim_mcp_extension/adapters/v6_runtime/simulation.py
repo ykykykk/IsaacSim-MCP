@@ -127,7 +127,14 @@ class SimulationRuntime:
 
         self._bridge.ensure_physics_world()
         self._bridge.arm_reset_point()
-        SimulationManager.step(steps=num_steps)
+        # Keep rendered/Fabric transforms consistent with the physics read-back.
+        # Kit's normal Play loop does this; explicit stepping must request it.
+        fabric_enabled = SimulationManager.is_fabric_enabled()
+        SimulationManager.step(steps=num_steps, update_fabric=fabric_enabled)
+        if self._context.active_backend == "physx" and not fabric_enabled:
+            import omni.physx
+
+            omni.physx.get_physx_interface().update_transformations(False, True, True)
 
         result: Dict[str, Any] = {"stepped": num_steps}
 
@@ -258,7 +265,8 @@ class SimulationRuntime:
         sys.stderr = captured_err = BoundedTextBuffer(max_output_bytes)
         try:
             with cooperative_deadline(timeout_s):
-                self._bridge.ensure_physics_world()
+                # Arbitrary USD/read-only scripts must not start native physics
+                # behind a stopped timeline. Typed physics tools initialize it.
                 exec(code, local_ns)
             out = captured_out.getvalue()
             self._append_output_to_log(out)

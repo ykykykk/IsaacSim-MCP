@@ -107,7 +107,7 @@ def _essential(composition: dict) -> dict:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     scratch = Path(tempfile.mkdtemp(prefix="isaacsim-mcp-task-3-5-"))
     root_snapshot = scratch / "original-root.usda"
     session_snapshot = scratch / "original-session.usda"

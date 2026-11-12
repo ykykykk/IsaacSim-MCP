@@ -8,27 +8,12 @@
     "unsupported": "the active runtime or backend explicitly rejects the capability",
     "fail": "invocation reached the implementation and exposed a code or contract defect"
   },
-  "git_head": "a676cea7348ae65a31c88a5b7940fbe8089681e2",
-  "live_snapshot": {
-    "captured_at": "2026-08-25T16:28:11.755152+00:00",
-    "port": 8766,
-    "isaac_sim_version": "6.0.1-rc.7",
-    "adapter": "IsaacAdapterV6",
-    "physics_backend": "physx",
-    "timeline_state": "stopped",
-    "stage_path": "",
-    "extension_version": "0.6.0",
-    "extension_command_count": 128,
-    "ros2_extensions_enabled": false,
-    "nvidia_asset_catalog": {
-      "status": "success",
-      "sample_count": 1
-    }
-  },
-  "tool_count": 129,
+  "git_head": "0325a9c540c3749da7747d99b2753afc0901f1c6",
+  "live_snapshot": null,
+  "tool_count": 138,
   "counts": {
     "blocked": 11,
-    "pass": 118
+    "pass": 127
   },
   "results": [
     {
@@ -78,7 +63,7 @@
     {
       "tool": "apply_stage_batch",
       "module": "scene",
-      "purpose": "Preview or atomically apply up to 100 layer/arc/variant/semantic/attribute edits. Any failed operation restores the stage snapshot.",
+      "purpose": "Preview or apply up to 100 stage composition edits while the timeline is stopped.",
       "input": [
         {
           "name": "operations",
@@ -94,6 +79,11 @@
           "name": "readback_root_path",
           "required": false,
           "default": "'/'"
+        },
+        {
+          "name": "plan_id",
+          "required": false,
+          "default": "None"
         }
       ],
       "status": "pass",
@@ -122,7 +112,7 @@
     {
       "tool": "bake_navmesh",
       "module": "humans",
-      "purpose": "Bake the current stage NavMesh with a bounded wait; preview by default.",
+      "purpose": "Bake NavMesh with frame/wall-clock bounds; preview by default.",
       "input": [
         {
           "name": "max_frames",
@@ -133,6 +123,11 @@
           "name": "preview",
           "required": false,
           "default": "True"
+        },
+        {
+          "name": "timeout_seconds",
+          "required": false,
+          "default": "120.0"
         }
       ],
       "status": "pass",
@@ -161,7 +156,7 @@
     {
       "tool": "cancel_job",
       "module": "jobs",
-      "purpose": "Request cancellation and return a predictable terminal lifecycle state.",
+      "purpose": "Request cancellation and inspect the returned lifecycle state.",
       "input": [
         {
           "name": "job_id",
@@ -268,7 +263,7 @@
     {
       "tool": "capture_camera_output",
       "module": "sensors",
-      "purpose": "Capture a typed RTX camera annotator output.",
+      "purpose": "Capture RGB or a typed RTX camera annotator output.",
       "input": [
         {
           "name": "prim_path",
@@ -517,6 +512,48 @@
       },
       "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
       "blocker": null
+    },
+    {
+      "tool": "commit_source_changes",
+      "module": "workflow",
+      "purpose": "Apply an explicit source-commit plan. May write one file; never plays or rebuilds.",
+      "input": [
+        {
+          "name": "plan_id",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "save",
+          "required": false,
+          "default": "True"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
     },
     {
       "tool": "compute_ik",
@@ -1460,7 +1497,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -1480,13 +1517,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "create_ros2_clock_publisher",
@@ -1529,7 +1561,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -1549,13 +1581,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "create_ros2_joint_state_publisher",
@@ -1598,7 +1625,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -1618,13 +1645,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "create_ros2_lidar_publisher",
@@ -1687,7 +1709,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -1707,13 +1729,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "create_ros2_tf_publisher",
@@ -1766,7 +1783,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -1786,13 +1803,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "create_sdg_job",
@@ -2040,7 +2052,7 @@
           "default": "True"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -2060,13 +2072,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "delete_sdg_job",
@@ -3172,6 +3179,79 @@
       "blocker": null
     },
     {
+      "tool": "get_mpm_config",
+      "module": "mpm",
+      "purpose": "Read composed MPM configuration, defaults and its revision hash. No mutation.",
+      "input": [
+        {
+          "name": "expected_stage",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "prim_path",
+          "required": true,
+          "default": null
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
+      "tool": "get_mpm_status",
+      "module": "mpm",
+      "purpose": "Read MPM build/timeline/runtime status without rebuilding or downloading particles.",
+      "input": [],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
       "tool": "get_navmesh_status",
       "module": "humans",
       "purpose": "Return Navigation Core, NavMeshVolume, bake and area status.",
@@ -3255,6 +3335,34 @@
         "type": "guarded_live",
         "verified_at": "2026-08-24",
         "source": "scripts/verify_physics_authoring_live.py"
+      },
+      "kit_log": {
+        "checked": true,
+        "result": "See the named verifier's bounded run-scoped log evidence."
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
+    },
+    {
+      "tool": "get_physics_params",
+      "module": "simulation",
+      "purpose": "Read USD and runtime PhysX settings without creating or modifying a PhysicsScene.",
+      "input": [],
+      "status": "pass",
+      "prerequisites": [
+        "Isaac Sim 6.0.1",
+        "TCP 8766",
+        "dedicated scratch namespace for writes"
+      ],
+      "readback": "timeline/physics state, bounded script policy, audit and correlated logs",
+      "evidence": {
+        "type": "guarded_live",
+        "verified_at": "2026-08-25",
+        "source": "scripts/verify_command_governance_live.py"
       },
       "kit_log": {
         "checked": true,
@@ -3402,7 +3510,7 @@
       "module": "ros2",
       "purpose": "Read ROS 2 bridge/core/nodes state, domain source, distro, and workflow count.",
       "input": [],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -3422,13 +3530,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "get_runtime_status",
@@ -3686,6 +3789,16 @@
           "name": "root_path",
           "required": false,
           "default": "'/'"
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "default": "0"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "default": "1000"
         }
       ],
       "status": "pass",
@@ -3725,6 +3838,11 @@
           "name": "attribute",
           "required": true,
           "default": null
+        },
+        {
+          "name": "include_source",
+          "required": false,
+          "default": "False"
         }
       ],
       "status": "pass",
@@ -3996,6 +4114,48 @@
       "blocker": null
     },
     {
+      "tool": "list_mpm_configs",
+      "module": "mpm",
+      "purpose": "List MPM config prims in loaded active scene content without loading payloads.",
+      "input": [
+        {
+          "name": "offset",
+          "required": false,
+          "default": "0"
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "default": "50"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
       "tool": "list_nvidia_assets",
       "module": "assets",
       "purpose": "List NVIDIA assets that can be spawned through MCP.",
@@ -4022,11 +4182,11 @@
         "TCP 8766",
         "dedicated scratch namespace for writes"
       ],
-      "readback": "current NVIDIA asset catalog query succeeded and returned a bounded sample",
+      "readback": "catalog or resulting USD prim",
       "evidence": {
-        "type": "read_only_live",
-        "verified_at": "2026-08-25T16:28:11.755152+00:00",
-        "source": "scripts/generate_all_tools_report.py --live"
+        "type": "guarded_live",
+        "verified_at": "2026-08-20",
+        "source": "docs/research/ALL_TOOLS_TEST_REPORT_2026-08-20_42_TOOLS.md"
       },
       "kit_log": {
         "checked": true,
@@ -4089,7 +4249,7 @@
           "default": "'/World'"
         }
       ],
-      "status": "blocked",
+      "status": "pass",
       "prerequisites": [
         "Isaac Sim 6.0.1",
         "TCP 8766",
@@ -4109,13 +4269,8 @@
         "required": false,
         "integrity": "SHA-256 verified when an artifact is produced"
       },
-      "limitations": "Previously live-verified with an external subscriber; current runtime extensions are disabled.",
-      "blocker": {
-        "type": "runtime_prerequisite",
-        "missing": [
-          "enabled Isaac Sim ROS 2 bridge/core/nodes"
-        ]
-      }
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": null
     },
     {
       "tool": "load_environment",
@@ -4512,6 +4667,63 @@
       "blocker": null
     },
     {
+      "tool": "preview_source_commit",
+      "module": "workflow",
+      "purpose": "Plan selected Session defaults into one owning file; never saves or rebuilds.",
+      "input": [
+        {
+          "name": "expected_context",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "prim_path",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "attributes",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "target_layer",
+          "required": false,
+          "default": "None"
+        },
+        {
+          "name": "allow_shared",
+          "required": false,
+          "default": "False"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
       "tool": "read_artifact",
       "module": "artifacts",
       "purpose": "Read one bounded base64 chunk from a managed artifact.",
@@ -4692,9 +4904,61 @@
       "blocker": null
     },
     {
+      "tool": "request_mpm_rebuild",
+      "module": "mpm",
+      "purpose": "Preview or queue one MPM rebuild from the current composed configuration.",
+      "input": [
+        {
+          "name": "expected_stage",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "prim_path",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "expected_config_sha256",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "preview",
+          "required": false,
+          "default": "True"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
       "tool": "save_stage_as",
       "module": "scene",
-      "purpose": "Preview or export the current stage to a different local USD file inside scratch_root. Source overwrite is always rejected.",
+      "purpose": "Preview or export the current root layer to a local USD file inside scratch_root.",
       "input": [
         {
           "name": "path",
@@ -5965,6 +6229,105 @@
       },
       "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
       "blocker": null
+    },
+    {
+      "tool": "undo_stage_transaction",
+      "module": "workflow",
+      "purpose": "Preview or undo a retained USD memory transaction, not a disk save or particle rebuild.",
+      "input": [
+        {
+          "name": "transaction_id",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "preview",
+          "required": false,
+          "default": "True"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
+    },
+    {
+      "tool": "update_mpm_config",
+      "module": "mpm",
+      "purpose": "Validate a parameter patch; apply only to the session layer when preview=false.",
+      "input": [
+        {
+          "name": "expected_stage",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "prim_path",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "expected_config_sha256",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "changes",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "preview",
+          "required": false,
+          "default": "True"
+        }
+      ],
+      "status": "blocked",
+      "prerequisites": [
+        "optional external provider"
+      ],
+      "readback": "No historical live evidence for this optional integration",
+      "evidence": {
+        "type": "implementation_only",
+        "verified_at": "not verified",
+        "source": "docs/WORKFLOW_6_2.md"
+      },
+      "kit_log": {
+        "checked": false,
+        "result": "Not executed by historical verifier"
+      },
+      "artifacts": {
+        "required": false,
+        "integrity": "SHA-256 verified when an artifact is produced"
+      },
+      "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
+      "blocker": {
+        "type": "runtime_prerequisite",
+        "missing": [
+          "version-scoped live validation"
+        ]
+      }
     }
   ]
 }

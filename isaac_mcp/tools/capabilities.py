@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING, Callable
 from mcp.server.fastmcp import FastMCP
 
 from isaac_mcp import __version__
-from isaac_mcp.runtime_status import IsaacRuntimeUnavailableError
-from isaac_mcp.runtime_status import remember_runtime_identity
+from isaac_mcp.runtime_status import IsaacRuntimeUnavailableError, remember_runtime_identity
 from isaac_mcp.runtime_status import get_runtime_status as read_runtime_status
 from isaac_mcp.tool_inventory import tool_count
 from isaac_mcp.tool_profiles import CONSOLIDATED_REPLACEMENTS, VALID_TOOL_PROFILES

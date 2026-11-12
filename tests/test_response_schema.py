@@ -55,7 +55,7 @@ class _FakeMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self, name):
+    def tool(self, name, **kwargs):
         def decorator(function):
             self.tools[name] = function
             return function

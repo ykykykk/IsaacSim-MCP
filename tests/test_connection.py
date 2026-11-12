@@ -308,7 +308,7 @@ def test_registered_legacy_tool_returns_stable_runtime_crash_envelope():
         def __init__(self):
             self.tools = {}
 
-        def tool(self, name):
+        def tool(self, name, **kwargs):
             def decorator(function):
                 self.tools[name] = function
                 return function

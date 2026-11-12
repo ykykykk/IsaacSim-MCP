@@ -214,7 +214,7 @@ async def main() -> int:
             env={
                 **os.environ,
                 "ISAAC_MCP_HOST": "127.0.0.1",
-                "ISAAC_MCP_PORT": "8766",
+                "ISAAC_MCP_PORT": os.environ["ISAAC_MCP_PORT"],
                 "ISAAC_MCP_TOOL_PROFILE": "legacy",
             },
         )

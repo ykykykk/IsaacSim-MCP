@@ -80,7 +80,7 @@ def _ros_environment() -> dict[str, str]:
 def _parent() -> int:
     from isaac_mcp.connection import IsaacConnection
 
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     temp_root = Path(tempfile.mkdtemp(prefix="isaacsim-mcp-task-4-2-"))
     output = temp_root / "subscriber-result.json"
     ready = temp_root / "subscriber-ready.txt"

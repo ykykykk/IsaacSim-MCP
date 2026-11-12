@@ -136,7 +136,7 @@ def _delete_if_present(connection: IsaacConnection) -> None:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     temp_dir = tempfile.TemporaryDirectory(prefix=".isaacsim-mcp-task-4-1-", dir=REPOSITORY_ROOT)
     script_file = Path(temp_dir.name) / "controller.py"
     created = False

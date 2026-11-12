@@ -5,6 +5,7 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from isaac_sim_mcp_extension.adapters.v6 import IsaacAdapterV6
 from isaac_sim_mcp_extension.adapters.v6_runtime import (
     AssetPolicyBridge,
@@ -19,6 +20,14 @@ from isaac_sim_mcp_extension.adapters.v6_runtime import (
 
 ROOT = Path(__file__).resolve().parents[1]
 V6_PATH = ROOT / "isaac.sim.mcp_extension" / "isaac_sim_mcp_extension" / "adapters" / "v6.py"
+
+
+def test_execute_script_does_not_initialize_physics_implicitly():
+    runtime = SimulationRuntime(SimpleNamespace(), SimpleNamespace())
+    runtime._append_output_to_log = lambda output: None
+    result = runtime.execute_script("print('read-only-probe')")
+    assert result["status"] == "success", result
+    assert result["stdout"].strip() == "read-only-probe"
 
 
 def _facade_with_runtime(attribute: str, runtime) -> IsaacAdapterV6:
@@ -103,11 +112,22 @@ def test_facade_forwarding_preserves_monkeypatch_targets() -> None:
     assert calls == ["play"]
 
 
-def test_step_observes_joint_names_and_values_from_one_runtime_snapshot(monkeypatch) -> None:
+@pytest.mark.parametrize("fabric_enabled", [False, True])
+def test_step_observes_joint_names_and_values_from_one_runtime_snapshot(monkeypatch, fabric_enabled) -> None:
+    updates = []
+    physx = SimpleNamespace(get_physx_interface=lambda: SimpleNamespace(
+        update_transformations=lambda *args: updates.append(args)))
+    monkeypatch.setitem(sys.modules, "omni.physx", physx)
+    monkeypatch.setattr(sys.modules["omni"], "physx", physx, raising=False)
     class _SimulationManager:
         @classmethod
-        def step(cls, steps):
+        def step(cls, steps, update_fabric):
             assert steps == 1
+            assert update_fabric is fabric_enabled
+
+        @classmethod
+        def is_fabric_enabled(cls):
+            return fabric_enabled
 
     monkeypatch.setitem(
         sys.modules,
@@ -137,8 +157,10 @@ def test_step_observes_joint_names_and_values_from_one_runtime_snapshot(monkeypa
 
     runtime = object.__new__(SimulationRuntime)
     runtime._bridge = _Bridge()
+    runtime._context = SimpleNamespace(active_backend="physx")
 
     result = runtime.step(observe_joints=["/World/Panda"])
+    assert updates == ([] if fabric_enabled else [(False, True, True)])
 
     assert result["joint_states"] == [
         {

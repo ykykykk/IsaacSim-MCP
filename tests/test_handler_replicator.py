@@ -171,3 +171,23 @@ def test_status_reports_no_owned_writer_or_trigger_when_idle(monkeypatch):
     assert result["data"]["active_job_count"] == 0
     assert result["data"]["writer_attached"] is False
     assert result["data"]["trigger_active"] is False
+
+
+@pytest.mark.parametrize("written_frames", [0, 1, 2])
+def test_completed_job_requires_actual_annotation_outputs(monkeypatch, written_frames):
+    store = SimpleNamespace(write_bytes=lambda *args, **kwargs: {"handle": "artifact://test"})
+    monkeypatch.setattr(replicator, "get_artifact_store", lambda: store)
+    job = {
+        "job_id": "sdg-output-check", "state": "completed",
+        "config": _valid_config(), "frames_requested": 2, "frames_completed": 2,
+        "cleanup": {}, "artifacts": [
+            {"format": "png", "relative_path": f"{annotation}_{frame:04d}.png"}
+            for annotation in ("rgb", "semantic_segmentation")
+            for frame in range(written_frames)
+        ],
+    }
+    manifest = replicator._make_manifest(job)
+    expected = "completed" if written_frames == 2 else "error"
+    assert job["state"] == manifest["state"] == expected
+    if expected == "error":
+        assert "SDG output incomplete" in manifest["error"] == job["error"]

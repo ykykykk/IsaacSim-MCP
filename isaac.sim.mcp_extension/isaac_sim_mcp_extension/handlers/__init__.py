@@ -48,7 +48,6 @@ def register_all_handlers(registry: Dict[str, Any], adapter: IsaacAdapterBase) -
         materials,
         motion,
         mpm,
-        workflow,
         objects,
         physics,
         replicator,
@@ -58,6 +57,7 @@ def register_all_handlers(registry: Dict[str, Any], adapter: IsaacAdapterBase) -
         sensors,
         simulation,
         stage_composition,
+        workflow,
     )
 
     for module in [

@@ -413,6 +413,15 @@ def _make_manifest(job: Dict[str, Any], *, error: Optional[str] = None) -> Dict[
                 if frame_match:
                     annotation_frames[annotation].add(int(frame_match.group(1)))
                 break
+    if job["state"] == "completed":
+        missing = {
+            name: len(frames) for name, frames in annotation_frames.items()
+            if len(frames) != job["frames_requested"]
+        }
+        if error or missing or job["frames_completed"] != job["frames_requested"]:
+            error = error or f"SDG output incomplete: expected {job['frames_requested']} frames per annotation; observed {missing}"
+            job["state"] = "error"
+            job["error"] = error
     manifest = {
         "schema_version": "1.0",
         "job_id": job["job_id"],

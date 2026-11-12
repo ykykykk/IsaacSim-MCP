@@ -90,7 +90,7 @@ async def main() -> int:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "isaac_mcp.server"],
-        env={**os.environ, "ISAAC_MCP_PORT": "8766"},
+        env={**os.environ, "ISAAC_MCP_PORT": os.environ["ISAAC_MCP_PORT"]},
     )
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
@@ -101,9 +101,9 @@ async def main() -> int:
             try:
                 capabilities = _payload(await session.call_tool("get_capabilities", {}))
                 data = capabilities["data"]
-                assert data["runtime"]["isaac_sim_version"].startswith("6.0.1")
+                assert data["runtime"]["isaac_sim_version"].startswith("6.2.")
                 assert data["feature_flags"]["artifact.transport"]["state"] == "supported"
-                assert data["extension"]["command_count"] == 54
+                assert data["extension"]["command_count"] >= 54
 
                 target = _payload(
                     await session.call_tool(

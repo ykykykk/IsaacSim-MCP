@@ -13,7 +13,7 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 def test_docs_root_is_an_index_plus_the_five_authoritative_sections():
     assert {path.name for path in DOCS.iterdir() if path.is_dir()} == EXPECTED_SECTIONS
-    assert {path.name for path in DOCS.iterdir() if path.is_file()} == {"README.md"}
+    assert {path.name for path in DOCS.iterdir() if path.is_file()} == {"README.md", "ISAAC_6_2_LOCAL.md", "WORKFLOW_6_2.md"}
 
 
 def test_all_local_markdown_links_resolve():

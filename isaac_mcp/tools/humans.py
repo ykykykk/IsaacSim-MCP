@@ -62,6 +62,10 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
     ) -> str:
         """Spawn animated NVIDIA human characters into the CURRENT USD stage.
 
+        Use reload_script or execute_script for runtime behavior companions.
+        This operation does not reopen the stage; NavMesh must already be available.
+
+
         Uses Isaac Sim 6.0+'s ``isaacsim.replicator.agent.core`` (IRA 1.x)
         character loader and SimReady assets. Unlike ``IRA.setup_simulation()``,
         this tool does not reopen the environment USD, so existing scene edits

@@ -140,7 +140,7 @@ def test_create_mcp_uses_http_environment_settings(
 
     fast_mcp.assert_called_once_with(
         "IsaacSimMCP",
-        instructions=server._INSTRUCTIONS,
+        instructions=server._INSTRUCTIONS + "\nOnly tools selected by the configured domains are available. Do not invoke hidden tools.\n",
         lifespan=server.server_lifespan,
         host=expected_host,
         port=expected_port,
@@ -156,4 +156,7 @@ def test_create_mcp_appends_consolidated_instructions(monkeypatch):
 
     server._create_mcp()
 
-    assert fast_mcp.call_args.kwargs["instructions"] == server._INSTRUCTIONS + server._CONSOLIDATED_INSTRUCTIONS
+    instructions = fast_mcp.call_args.kwargs["instructions"]
+    assert server._CONSOLIDATED_INSTRUCTIONS in instructions
+    assert "query_prim(action=get)" in instructions
+    assert "Only tools selected by the configured domains" in instructions

@@ -40,7 +40,7 @@ def _port_open(port: int) -> bool:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     evidence: dict = {}
     run_id = uuid.uuid4().hex
     sdg_job_id = None
@@ -48,7 +48,7 @@ def main() -> int:
         _wait_stage(connection)
         _data(connection.send_command("simulation.stop"))
         capabilities = _data(connection.send_command("system.get_capabilities"))
-        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.0.1")
+        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.2.")
         assert capabilities["extension"]["command_count"] == extension_tool_count()
         assert capabilities["feature_flags"]["job.lifecycle"]["state"] == "supported"
         assert capabilities["feature_flags"]["diagnostics.correlation"]["state"] == "supported"
@@ -92,7 +92,7 @@ def main() -> int:
 
         # Prove the job is owned by Kit rather than the client socket.
         connection.disconnect()
-        connection = IsaacConnection(port=8766)
+        connection = IsaacConnection()
         terminal = None
         deadline = time.monotonic() + 60.0
         while time.monotonic() < deadline:
@@ -208,12 +208,12 @@ def main() -> int:
             evidence["timeline_after_cleanup"] = _data(connection.send_command("simulation.get_state"))[
                 "timeline_state"
             ]
-            evidence["port_8766_open"] = _port_open(8766)
+            evidence["configured_port_open"] = _port_open(connection.port)
             connection.disconnect()
 
     assert evidence["root_absent_after_cleanup"] is True, evidence
     assert evidence["timeline_after_cleanup"] == "stopped", evidence
-    assert evidence["port_8766_open"] is True, evidence
+    assert evidence["configured_port_open"] is True, evidence
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0
 

@@ -98,7 +98,7 @@ async def main() -> int:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "isaac_mcp.server"],
-        env={**os.environ, "ISAAC_MCP_PORT": "8766"},
+        env={**os.environ, "ISAAC_MCP_PORT": os.environ["ISAAC_MCP_PORT"]},
     )
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
@@ -107,7 +107,7 @@ async def main() -> int:
             try:
                 capabilities = _payload(await session.call_tool("get_capabilities", {}))
                 flags = capabilities["data"]["feature_flags"]
-                assert capabilities["data"]["runtime"]["isaac_sim_version"].startswith("6.0.1")
+                assert capabilities["data"]["runtime"]["isaac_sim_version"].startswith("6.2.")
                 assert flags["camera.annotators"]["state"] == "supported"
                 assert flags["camera.calibration"]["state"] == "supported"
 

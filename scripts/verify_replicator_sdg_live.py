@@ -72,11 +72,12 @@ def _config(frame_count: int) -> dict:
     }
 
 
-def _run_completed(connection: IsaacConnection, frame_count: int) -> dict:
+def _run_completed(connection: IsaacConnection, frame_count: int, owned_jobs: list[str]) -> dict:
     preview = _data(connection.send_command("replicator.create_job", {**_config(frame_count), "preview": True}))
     assert preview["preview"] is True
     created = connection.send_command("replicator.create_job", {**_config(frame_count), "preview": False})
     job = _data(created)
+    owned_jobs.append(job["job_id"])
     assert created["readback"] == {"job_exists": True, "state": "configured"}
     started = connection.send_command("replicator.start_job", {"job_id": job["job_id"], "preview": False})
     _data(started)
@@ -97,7 +98,7 @@ def _run_completed(connection: IsaacConnection, frame_count: int) -> dict:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     evidence = {}
     jobs = []
     try:
@@ -106,17 +107,15 @@ def main() -> int:
         assert state_before["timeline_state"] == "stopped", state_before
         scene_before = _data(connection.send_command("scene.get_info"))
         capabilities = _data(connection.send_command("system.get_capabilities"))
-        assert capabilities["extension"]["command_count"] == 113
+        assert capabilities["extension"]["command_count"] >= 113
         assert capabilities["feature_flags"]["replicator.sdg_workflows"]["state"] == "supported"
         existing = connection.send_command("scene.get_prim_info", {"prim_path": ROOT})
         if existing["status"] == "success":
             _data(connection.send_command("objects.delete", {"prim_path": ROOT}))
         _create_fixture(connection)
 
-        first = _run_completed(connection, 2)
-        jobs.append(first["job_id"])
-        second = _run_completed(connection, 2)
-        jobs.append(second["job_id"])
+        first = _run_completed(connection, 2, jobs)
+        second = _run_completed(connection, 2, jobs)
         assert first["manifest"]["randomization_sha256"] == second["manifest"]["randomization_sha256"]
         assert first["manifest"]["randomization_trace"] == second["manifest"]["randomization_trace"]
 

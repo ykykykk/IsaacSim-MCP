@@ -209,7 +209,7 @@ def _assert_120_hz_readback(result: dict) -> None:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     owns_scene = False
     baseline_path = None
     baseline_snapshot = None
@@ -217,7 +217,7 @@ def main() -> int:
     active_scene_path = None
     try:
         capabilities = _data(connection.send_command("system.get_capabilities"))
-        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.0.1")
+        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.2.")
         assert capabilities["runtime"]["physics_backend"] == "physx"
         assert capabilities["feature_flags"]["physics.time_step"]["state"] == "supported"
         assert capabilities["feature_flags"]["physics.gpu_enabled"]["state"] == "supported"

@@ -35,12 +35,11 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from isaac_mcp.config import apply_environment
-
-_EFFECTIVE_CONFIG = apply_environment()
-
 from isaac_mcp.connection import get_isaac_connection, reset_isaac_connection
 from isaac_mcp.tool_profiles import resolve_tool_profile
 from isaac_mcp.tools import register_all_tools
+
+_EFFECTIVE_CONFIG = apply_environment()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("IsaacMCPServer")

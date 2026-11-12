@@ -10,6 +10,11 @@ import pytest
 from isaac_mcp import runtime_status
 
 
+@pytest.fixture(autouse=True)
+def isolate_endpoint_identity_cache(monkeypatch):
+    monkeypatch.setattr(runtime_status, "_LAST_ENDPOINT_RUNTIME", {})
+
+
 def test_missing_state_file_is_reported_as_unmanaged(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime_status, "probe_runtime_health", lambda **_kwargs: {"responding": False})
 

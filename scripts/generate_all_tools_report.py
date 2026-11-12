@@ -251,7 +251,7 @@ def live_snapshot(port: int) -> dict[str, Any]:
 
 
 def build(snapshot: dict[str, Any] | None) -> dict[str, Any]:
-    tools = inventory()
+    tools = inventory(domains="all")
     if len(tools) != len({item["tool"] for item in tools}):
         raise RuntimeError("duplicate named tools found in source inventory")
     expected_extension_commands = extension_tool_count()
@@ -263,7 +263,11 @@ def build(snapshot: dict[str, Any] | None) -> dict[str, Any]:
         )
     results = []
     for item in tools:
-        profile = TOOL_EVIDENCE.get(item["tool"], PROFILES[item["module"]])
+        profile = TOOL_EVIDENCE.get(item["tool"]) or PROFILES.get(item["module"])
+        missing_evidence = profile is None
+        if missing_evidence:
+            profile = {"readback": "No historical live evidence for this optional integration",
+                       "date": "not verified", "verifier": "docs/WORKFLOW_6_2.md"}
         entry = {
             **item,
             "status": "pass",
@@ -278,6 +282,11 @@ def build(snapshot: dict[str, Any] | None) -> dict[str, Any]:
             "limitations": "PhysX evidence only; Newton remains separately untested or unsupported unless capability data says otherwise.",
             "blocker": None,
         }
+        if missing_evidence:
+            entry.update(status="blocked", prerequisites=["optional external provider"],
+                         evidence={"type": "implementation_only", "verified_at": "not verified", "source": profile["verifier"]},
+                         kit_log={"checked": False, "result": "Not executed by historical verifier"},
+                         blocker={"type": "runtime_prerequisite", "missing": ["version-scoped live validation"]})
         if item["tool"] in OVERRIDES:
             entry.update(OVERRIDES[item["tool"]])
         if item["tool"] == "get_runtime_status":
@@ -399,11 +408,7 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8766)
     args = parser.parse_args()
     snapshot = live_snapshot(args.port) if args.live else None
-    if snapshot is None and RESULT_PATH.exists():
-        try:
-            snapshot = json.loads(RESULT_PATH.read_text(encoding="utf-8")).get("live_snapshot")
-        except (OSError, ValueError, json.JSONDecodeError):
-            snapshot = None
+    # Never compare today's inventory to a cached historical command count.
     report = build(snapshot)
     if not args.check:
         RESULT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

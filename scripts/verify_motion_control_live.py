@@ -73,12 +73,12 @@ print(json.dumps(unexpected))
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     report: dict = {}
     owns_fixtures = False
     try:
         capabilities = _data(connection.send_command("system.get_capabilities"))
-        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.0.1")
+        assert capabilities["runtime"]["isaac_sim_version"].startswith("6.2.")
         assert capabilities["runtime"]["physics_backend"] == "physx"
         assert capabilities["extension"]["command_count"] == extension_tool_count()
         assert capabilities["feature_flags"]["motion.ik_and_planning"]["state"] == "supported"
@@ -94,6 +94,7 @@ def main() -> int:
         _data(connection.send_command("robots.create", {"robot_type": "frankapanda", "prim_path": ROBOT_PATH}))
         _progress("play_and_initialize_franka")
         _data(connection.send_command("simulation.play"))
+        _data(connection.send_command("simulation.pause"))
         _initialize_runtime_pose(connection)
         initial_state = _data(connection.send_command("robots.get_joint_state", {"prim_path": ROBOT_PATH}))
         measured = [joint["position"] for joint in initial_state["joints"]]

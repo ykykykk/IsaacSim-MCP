@@ -48,6 +48,7 @@ EXPECTED_PUBLIC_METHODS = {
     "get_physics_body",
     "get_physics_joint",
     "get_physics_state",
+    "get_physics_params",
     "get_prim_actual_size",
     "get_prim_info",
     "get_prim_transform",
@@ -84,7 +85,7 @@ def test_v6_public_method_surface_matches_phase_d_baseline() -> None:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_")
     }
     assert methods == EXPECTED_PUBLIC_METHODS
-    assert len(methods) == 64
+    assert len(methods) == 65
 
 
 def test_v6_runtime_components_are_not_imported_by_handlers() -> None:

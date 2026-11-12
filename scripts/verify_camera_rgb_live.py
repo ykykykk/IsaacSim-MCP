@@ -114,13 +114,13 @@ async def main() -> int:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "isaac_mcp.server"],
-        env={**os.environ, "ISAAC_MCP_PORT": "8766"},
+        env={**os.environ, "ISAAC_MCP_PORT": os.environ["ISAAC_MCP_PORT"]},
     )
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             capabilities = _payload(await session.call_tool("get_capabilities", {}))
-            assert capabilities["data"]["runtime"]["isaac_sim_version"].startswith("6.0.1")
+            assert capabilities["data"]["runtime"]["isaac_sim_version"].startswith("6.2.")
             assert capabilities["data"]["feature_flags"]["camera.rgb_pixels"]["state"] == "supported"
 
             created = _payload(
@@ -170,7 +170,7 @@ async def _verify_post_stop_updates():
 
 asyncio.ensure_future(_verify_post_stop_updates())
 """
-            scheduled = _payload(await session.call_tool("execute_script", {"code": post_stop_code}))
+            scheduled = _payload(await session.call_tool("execute_script", {"code": post_stop_code, "allow_background": True}))
             assert scheduled["status"] == "success", scheduled
             for _attempt in range(300):
                 if post_stop_marker.exists():
@@ -187,7 +187,7 @@ asyncio.ensure_future(_verify_post_stop_updates())
     width, height, channels, pixels = _decode_png(png)
 
     assert artifact_meta["managed"] is True
-    assert artifact_meta["handle"].startswith("artifact://camera/")
+    assert artifact_meta["handle"].startswith("artifact://managed/")
     assert hashlib.sha256(png).hexdigest() == artifact_meta["sha256"]
     assert [height, width, channels] == image["shape"] == [48, 64, 3]
     assert image["dtype"] == "uint8" and image["color_space"] == "RGB"

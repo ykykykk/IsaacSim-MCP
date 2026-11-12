@@ -68,7 +68,7 @@ def test_nonzero_exit_restarts_and_preserves_last_crash(tmp_path):
     assert ready_state["runtime_pid"] == ready_state["launcher_pid"]
     assert ready_state["runtime_pid_provenance"] == "legacy_alias_of_launcher_pid"
     assert ready_state["kit_pid"] is None
-    assert ready_state["kit_pid_provenance"] == "unknown_not_exposed_by_system.get_capabilities"
+    assert ready_state["kit_pid_provenance"] == "unknown"
     assert states[-1]["restart_count"] == 1
 
 

@@ -122,10 +122,27 @@ class SensorRuntime:
             pending = self._render_request
             if pending is not None and not pending.done():
                 return True
-            self._render_request = asyncio.ensure_future(rep.orchestrator.step_async(pause_timeline=True))
+            self._render_request = asyncio.ensure_future(rep.orchestrator.step_async(pause_timeline=True, delta_time=0.0))
             return True
         except Exception:
             return False
+
+    def _camera_frame_ready(self) -> bool:
+        """Consume one completed render, never a cached pre-step paused frame."""
+        import omni.timeline
+
+        if omni.timeline.get_timeline_interface().is_playing():
+            return True
+        pending = self._render_request
+        if pending is None:
+            if not self._request_render_frame():
+                raise RuntimeError("Unable to schedule a fresh camera render")
+            return False
+        if not pending.done():
+            return False
+        self._render_request = None
+        pending.result()
+        return True
 
     def _apply_sensor_schema(self, prim_path: str) -> None:
         """Make an already-present prim acceptable to the RTX sensor wrappers.
@@ -188,6 +205,8 @@ class SensorRuntime:
         if sensor is None:
             sensor = CameraSensor(path=prim_path, resolution=(720, 1280), annotators=CAMERA_ANNOTATORS)
             self._camera_sensors[prim_path] = sensor
+        if not self._camera_frame_ready():
+            return np.zeros((0,), dtype=np.uint8)
         data, _info = sensor.get_data("rgb")
         if data is None:
             # Nothing rendered yet. Ask Replicator for a frame so the next call
@@ -213,6 +232,8 @@ class SensorRuntime:
         elif annotator not in getattr(sensor, "_annotators", {}):
             sensor.attach_annotators(annotator)
 
+        if not self._camera_frame_ready():
+            return np.zeros((0,), dtype=np.uint8), {}
         data, info = sensor.get_data(annotator)
         if data is None:
             self._request_render_frame()

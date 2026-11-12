@@ -1,10 +1,36 @@
 from __future__ import annotations
 
+import sys
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from isaac_sim_mcp_extension.adapters.v6 import IsaacAdapterV6
 from isaac_sim_mcp_extension.adapters.v6_runtime.sensors import SensorRuntime
+
+
+def test_paused_camera_waits_for_a_new_render_on_every_capture(monkeypatch):
+    timeline = SimpleNamespace(get_timeline_interface=lambda: SimpleNamespace(is_playing=lambda: False))
+    monkeypatch.setitem(sys.modules, "omni.timeline", timeline)
+    monkeypatch.setattr(sys.modules["omni"], "timeline", timeline)
+    runtime = SensorRuntime(object(), object())
+    pending = SimpleNamespace(done=lambda: False, result=lambda: None)
+    calls = []
+
+    def request():
+        calls.append("render")
+        runtime._render_request = pending
+        return True
+
+    monkeypatch.setattr(runtime, "_request_render_frame", request)
+    assert not runtime._camera_frame_ready()
+    assert not runtime._camera_frame_ready()
+    assert calls == ["render"]
+    pending.done = lambda: True
+    assert runtime._camera_frame_ready()
+    assert runtime._render_request is None
+    assert not runtime._camera_frame_ready()
+    assert calls == ["render", "render"]
 
 
 class _SensorSpy:

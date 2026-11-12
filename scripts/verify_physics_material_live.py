@@ -24,7 +24,7 @@ def _readback(response: dict) -> dict:
 
 
 def main() -> int:
-    connection = IsaacConnection(port=8766)
+    connection = IsaacConnection()
     bodies = {
         "LowSlide": ([-6, -3, 0.55], "Cube"),
         "HighSlide": ([-6, 3, 0.55], "Cube"),

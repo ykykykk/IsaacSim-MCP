@@ -224,6 +224,13 @@ class USDLoader:
 
     def _load_prim(self, url, path: str = "/World/my_usd", size=1.0):
         """Helper method to load a USD prim from url to specific scene path."""
+        # Resolve and parse before authoring: AddReference may return success
+        # even when its asset cannot compose, leaving an empty destination prim.
+        layer = Sdf.Layer.FindOrOpen(url)
+        if layer is None:
+            raise ValueError(f"Cannot open USD asset: {url}")
+        if not layer.defaultPrim or not layer.GetPrimAtPath("/" + layer.defaultPrim):
+            raise ValueError(f"USD asset has no valid defaultPrim: {url}")
         try:
             stage = omni.usd.get_context().get_stage()
 
@@ -246,8 +253,7 @@ class USDLoader:
 
             return prim
         except Exception as e:
-            carb.log_info(f"Error in _load_prim: {str(e)}")
-            return {"error": str(e)}
+            raise RuntimeError(f"Unable to reference USD asset {url}: {e}") from e
 
     def _set_transform(self, prim, location=None, rotation=None, scale=None):
         """Set transform operations on a USD prim."""
@@ -359,8 +365,7 @@ class USDLoader:
             return path
 
         except Exception as e:
-            carb.log_info(f"Error in load_usd_from_url: {str(e)}")
-            return {"error": str(e)}
+            raise RuntimeError(f"Unable to load USD asset {url_path}: {e}") from e
 
     @staticmethod
     def test_tasks_load():
