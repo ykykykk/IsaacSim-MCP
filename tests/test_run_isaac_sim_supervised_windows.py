@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import subprocess
 from pathlib import Path
 
@@ -29,26 +30,31 @@ def _fake_isaac_root(tmp_path: Path, exit_code: int) -> Path:
 
 def _run(tmp_path: Path, exit_code: int) -> tuple[subprocess.CompletedProcess[str], dict]:
     state_file = tmp_path / "runtime state.json"
-    result = subprocess.run(
-        [
-            PWSH or "pwsh",
-            "-NoProfile",
-            "-File",
-            str(SCRIPT),
-            "-IsaacSimRoot",
-            str(_fake_isaac_root(tmp_path, exit_code)),
-            "-StateFile",
-            str(state_file),
-            "-MaxRestarts",
-            "0",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env={**os.environ, "ISAAC_PHYSICS_GPU": "0"},
-    )
+    # The fake launcher never listens: reserve a private port, not the user endpoint.
+    with socket.socket() as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        result = subprocess.run(
+            [
+                PWSH or "pwsh",
+                "-NoProfile",
+                "-File",
+                str(SCRIPT),
+                "-IsaacSimRoot",
+                str(_fake_isaac_root(tmp_path, exit_code)),
+                "-Port",
+                str(reservation.getsockname()[1]),
+                "-StateFile",
+                str(state_file),
+                "-MaxRestarts",
+                "0",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "ISAAC_PHYSICS_GPU": "0"},
+        )
     return result, json.loads(state_file.read_text(encoding="utf-8"))
 
 

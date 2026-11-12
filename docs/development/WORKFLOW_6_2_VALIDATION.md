@@ -58,3 +58,17 @@ MCP 本轮定向验收通过。覆盖离线契约、Windows 启动器、真实 s
 
 日志没有相关未处理 Error；包含官方 API 弃用提示、空 URL 警告，以及切换 Stage 时 tensor view 失效提示。未执行物理步进。
 当前聊天的已缓存旧客户端曾显示 0.6.0 / 129 工具；独立新进程已确认 0.7.0，重启 Codex 刷新缓存，不把旧客户端读数当作新版验收结果。
+
+## 用户要求再次复测：2026-11-12 12:42—12:44
+
+基线 `17b022f`，仍仅 MCP；外部插件禁用，正式场景未打开。
+
+- 一次完整运行上述 90 个离线案例：89 passed / 1 failed。
+- 失败项为 supervisor 的假宿主测试使用本机默认 8876，恰逢真实隔离宿主启动。状态文件明确返回 `external_runtime_detected / healthy_runtime_already_listening`，属于测试端口未隔离，不是启动器错误。
+- 测试夹具改为为每次调用保留独立临时端口，并显式传入 `-Port`；假启动器不监听该端口。真实宿主仍运行时定点复跑 supervisor 两项：2 passed。90 项覆盖中的失败项已消除，不重复运行其余已通过的 89 项。
+- 同范围 Ruff 通过；本轮只改测试夹具，不改 MCP 功能代码。
+- 新实例的七组 live 工作流再次全部通过。
+- 新建 stdio 客户端再次完成 initialize / tools/list / tools/call，80 个 core+scene+physics 工具，客户端和扩展均 0.7.0。
+- Kit 日志没有 Error 级记录；返回空且 stopped 的 Stage 后，隔离宿主正常退出，退出码 0。
+
+本轮原始证据位于 `test_outputs/workflow-6.2-rerun-20261112-124224/`，包含 offline.txt/xml、supervisor-isolated.txt/xml、live-report.json、stdio-report.json 与宿主日志。不包含外部插件测试或性能验证。
