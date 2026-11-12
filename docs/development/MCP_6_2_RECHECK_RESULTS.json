@@ -1,0 +1,852 @@
+{
+  "date": "2026-11-12",
+  "baseline": "0a34263",
+  "runtime": "Isaac Sim 6.2.0-rc.14 / Windows / PhysX",
+  "scope": "MCP only; external MPM/save plugins unchanged and disabled; no publishing",
+  "offline": {
+    "passed": 701,
+    "deselected": 53,
+    "failed": 0,
+    "log": "offline-final2.log"
+  },
+  "lint": "passed",
+  "live_domains_passed": 28,
+  "live_domains_failed": 0,
+  "external_legacy_tools_not_positive_tested": 24,
+  "domain_results": [
+    {
+      "domain": "controller_profiles",
+      "exit_code": 0,
+      "elapsed": 5.93
+    },
+    {
+      "domain": "multi_robot_gpu",
+      "exit_code": 0,
+      "elapsed": 17.46
+    },
+    {
+      "domain": "robot_joint_control",
+      "exit_code": 0,
+      "elapsed": 5.01
+    },
+    {
+      "domain": "robot_joint_drive_config",
+      "exit_code": 0,
+      "elapsed": 4.21
+    },
+    {
+      "domain": "controller_singletons",
+      "exit_code": 0,
+      "elapsed": 4.38
+    },
+    {
+      "domain": "robot_visual",
+      "exit_code": 0,
+      "elapsed": 15.1
+    },
+    {
+      "domain": "command_governance",
+      "exit_code": 0,
+      "elapsed": 1.55
+    },
+    {
+      "domain": "job_diagnostics",
+      "exit_code": 0,
+      "elapsed": 5.41
+    },
+    {
+      "domain": "stage_composition",
+      "exit_code": 0,
+      "elapsed": 2.57
+    },
+    {
+      "domain": "physics_authoring",
+      "exit_code": 0,
+      "elapsed": 2.26
+    },
+    {
+      "domain": "physics_material",
+      "exit_code": 0,
+      "elapsed": 2.66
+    },
+    {
+      "domain": "physics_params",
+      "exit_code": 0,
+      "elapsed": 1.46
+    },
+    {
+      "domain": "omnigraph_lifecycle",
+      "exit_code": 0,
+      "elapsed": 3.86
+    },
+    {
+      "domain": "backend_capability_matrix",
+      "exit_code": 0,
+      "elapsed": 1.21
+    },
+    {
+      "domain": "camera_rgb",
+      "exit_code": 0,
+      "elapsed": 8.28
+    },
+    {
+      "domain": "camera_outputs",
+      "exit_code": 0,
+      "elapsed": 6.55
+    },
+    {
+      "domain": "lidar_config",
+      "exit_code": 0,
+      "elapsed": 7.12
+    },
+    {
+      "domain": "lidar_point_cloud",
+      "exit_code": 0,
+      "elapsed": 7.06
+    },
+    {
+      "domain": "sensor_lifecycle",
+      "exit_code": 0,
+      "elapsed": 13.76
+    },
+    {
+      "domain": "artifact_transport",
+      "exit_code": 0,
+      "elapsed": 37.98
+    },
+    {
+      "domain": "native_image_content",
+      "exit_code": 0,
+      "elapsed": 7.7
+    },
+    {
+      "domain": "motion_control",
+      "exit_code": 0,
+      "elapsed": 2.95
+    },
+    {
+      "domain": "replicator_sdg",
+      "exit_code": 0,
+      "elapsed": 4.88
+    },
+    {
+      "domain": "workflow_6_2",
+      "exit_code": 0,
+      "elapsed": 2.5
+    },
+    {
+      "domain": "core_surface",
+      "exit_code": 0,
+      "elapsed": 4.84
+    },
+    {
+      "domain": "profiles",
+      "exit_code": 0,
+      "elapsed": 3.52
+    },
+    {
+      "domain": "alias_jobs",
+      "exit_code": 0,
+      "elapsed": 5.4
+    },
+    {
+      "domain": "native_image_content_http",
+      "exit_code": 0,
+      "elapsed": 5.9
+    }
+  ],
+  "attempt_history": [
+    {
+      "domain": "controller_profiles",
+      "exit_code": 1,
+      "elapsed": 6.83
+    },
+    {
+      "domain": "controller_profiles",
+      "exit_code": 0,
+      "elapsed": 9.53
+    },
+    {
+      "domain": "multi_robot_gpu",
+      "exit_code": 1,
+      "elapsed": 12.08
+    },
+    {
+      "domain": "multi_robot_gpu",
+      "exit_code": 0,
+      "elapsed": 18.4
+    },
+    {
+      "domain": "controller_profiles",
+      "exit_code": 0,
+      "elapsed": 5.93
+    },
+    {
+      "domain": "robot_joint_control",
+      "exit_code": 0,
+      "elapsed": 5.01
+    },
+    {
+      "domain": "robot_joint_drive_config",
+      "exit_code": 0,
+      "elapsed": 4.21
+    },
+    {
+      "domain": "controller_singletons",
+      "exit_code": 0,
+      "elapsed": 4.38
+    },
+    {
+      "domain": "robot_visual",
+      "exit_code": 0,
+      "elapsed": 15.1
+    },
+    {
+      "domain": "multi_robot_gpu",
+      "exit_code": 0,
+      "elapsed": 17.46
+    },
+    {
+      "domain": "command_governance",
+      "exit_code": 0,
+      "elapsed": 1.55
+    },
+    {
+      "domain": "job_diagnostics",
+      "exit_code": 0,
+      "elapsed": 5.41
+    },
+    {
+      "domain": "stage_composition",
+      "exit_code": 0,
+      "elapsed": 2.57
+    },
+    {
+      "domain": "physics_authoring",
+      "exit_code": 0,
+      "elapsed": 2.24
+    },
+    {
+      "domain": "physics_material",
+      "exit_code": 0,
+      "elapsed": 2.66
+    },
+    {
+      "domain": "physics_params",
+      "exit_code": 0,
+      "elapsed": 1.46
+    },
+    {
+      "domain": "omnigraph_lifecycle",
+      "exit_code": 0,
+      "elapsed": 3.86
+    },
+    {
+      "domain": "backend_capability_matrix",
+      "exit_code": 0,
+      "elapsed": 1.21
+    },
+    {
+      "domain": "camera_rgb",
+      "exit_code": 0,
+      "elapsed": 8.28
+    },
+    {
+      "domain": "camera_outputs",
+      "exit_code": 0,
+      "elapsed": 6.7
+    },
+    {
+      "domain": "lidar_config",
+      "exit_code": 0,
+      "elapsed": 7.12
+    },
+    {
+      "domain": "lidar_point_cloud",
+      "exit_code": 0,
+      "elapsed": 7.06
+    },
+    {
+      "domain": "sensor_lifecycle",
+      "exit_code": 0,
+      "elapsed": 13.76
+    },
+    {
+      "domain": "artifact_transport",
+      "exit_code": 1,
+      "elapsed": 10.17
+    },
+    {
+      "domain": "native_image_content",
+      "exit_code": 0,
+      "elapsed": 7.7
+    },
+    {
+      "domain": "motion_control",
+      "exit_code": 0,
+      "elapsed": 2.95
+    },
+    {
+      "domain": "replicator_sdg",
+      "exit_code": 0,
+      "elapsed": 4.88
+    },
+    {
+      "domain": "workflow_6_2",
+      "exit_code": 0,
+      "elapsed": 2.5
+    },
+    {
+      "domain": "core_surface",
+      "exit_code": 0,
+      "elapsed": 4.84
+    },
+    {
+      "domain": "profiles",
+      "exit_code": 0,
+      "elapsed": 3.52
+    },
+    {
+      "domain": "alias_jobs",
+      "exit_code": 0,
+      "elapsed": 5.4
+    },
+    {
+      "domain": "artifact_transport",
+      "exit_code": 0,
+      "elapsed": 37.98
+    },
+    {
+      "domain": "physics_authoring",
+      "exit_code": 0,
+      "elapsed": 2.26
+    },
+    {
+      "domain": "camera_outputs",
+      "exit_code": 0,
+      "elapsed": 6.55
+    },
+    {
+      "domain": "native_image_content_http",
+      "exit_code": 1,
+      "elapsed": 1.37
+    },
+    {
+      "domain": "native_image_content_http",
+      "exit_code": 0,
+      "elapsed": 5.9
+    }
+  ],
+  "mixed_gpu": {
+    "pass": true,
+    "gpu_enabled": true,
+    "mobile_displacement_m": {
+      "jetbot": 0.2275800078915928,
+      "kaya": 0.22673998973099124
+    },
+    "panda_joint1_rad": 0.6994946599006653,
+    "changed_pixels": 0.007722981770833333,
+    "poses_before": {
+      "frankapanda": {
+        "/World/MixedPanda/panda_hand": [
+          0.39994484186172485,
+          0.004774643573909998,
+          0.8250465989112854
+        ],
+        "/World/MixedPanda/panda_rightfinger": [
+          0.45463821291923523,
+          0.005424510687589645,
+          0.8045827150344849
+        ],
+        "/World/MixedPanda/panda_leftfinger": [
+          0.45463821291923523,
+          0.005424391012638807,
+          0.8045827150344849
+        ],
+        "/World/MixedPanda/panda_link0": [
+          -2.38418573772492e-09,
+          2.98023217215615e-10,
+          2.384185648907078e-08
+        ],
+        "/World/MixedPanda/panda_link1": [
+          -2.3841864038587346e-09,
+          2.9802318946003936e-10,
+          0.3329998850822449
+        ],
+        "/World/MixedPanda/panda_link2": [
+          -2.3841864038587346e-09,
+          2.9802318946003936e-10,
+          0.3329998850822449
+        ],
+        "/World/MixedPanda/panda_link3": [
+          -0.16918592154979706,
+          -0.0020182887092232704,
+          0.5998856425285339
+        ],
+        "/World/MixedPanda/panda_link4": [
+          -0.0995134636759758,
+          -0.0011870062444359064,
+          0.6440591216087341
+        ],
+        "/World/MixedPanda/panda_link5": [
+          0.26890233159065247,
+          0.003208610462024808,
+          0.7801199555397034
+        ],
+        "/World/MixedPanda/panda_link6": [
+          0.26890233159065247,
+          0.003208610462024808,
+          0.7801199555397034
+        ],
+        "/World/MixedPanda/panda_link7": [
+          0.29973602294921875,
+          0.003583917859941721,
+          0.8625403642654419
+        ]
+      },
+      "jetbot": {
+        "/World/MixedJetbot/chassis": [
+          2.000084161758423,
+          4.592002369463444e-07,
+          0.03349807858467102
+        ],
+        "/World/MixedJetbot/left_wheel": [
+          2.0000040531158447,
+          0.0467003658413887,
+          0.03349851444363594
+        ],
+        "/World/MixedJetbot/right_wheel": [
+          2.000164031982422,
+          -0.04669949784874916,
+          0.03349831700325012
+        ]
+      },
+      "kaya": {
+        "/World/MixedKaya/base_link": [
+          3.99958872795105,
+          -2.564553653883195e-07,
+          0.09182500094175339
+        ],
+        "/World/MixedKaya/axle_0": [
+          3.901545286178589,
+          0.000635760894510895,
+          0.04132434353232384
+        ],
+        "/World/MixedKaya/roller_0_0_0": [
+          3.891510248184204,
+          0.000659460318274796,
+          0.019999397918581963
+        ],
+        "/World/MixedKaya/roller_0_0_1": [
+          3.891510486602783,
+          -0.019616641104221344,
+          0.034729719161987305
+        ],
+        "/World/MixedKaya/roller_0_0_2": [
+          3.891510486602783,
+          -0.011872930452227592,
+          0.05856536328792572
+        ],
+        "/World/MixedKaya/roller_0_0_3": [
+          3.891510248184204,
+          0.013189055025577545,
+          0.058566272258758545
+        ],
+        "/World/MixedKaya/roller_0_0_4": [
+          3.891510248184204,
+          0.02093449980020523,
+          0.0347311832010746
+        ],
+        "/World/MixedKaya/roller_0_1_0": [
+          3.8724684715270996,
+          -0.011871818453073502,
+          0.02407056652009487
+        ],
+        "/World/MixedKaya/roller_0_1_1": [
+          3.8724684715270996,
+          -0.019617261365056038,
+          0.04790564626455307
+        ],
+        "/World/MixedKaya/roller_0_1_2": [
+          3.8724684715270996,
+          0.0006577780586667359,
+          0.06263745576143265
+        ],
+        "/World/MixedKaya/roller_0_1_3": [
+          3.8724682331085205,
+          0.020933888852596283,
+          0.04790712147951126
+        ],
+        "/World/MixedKaya/roller_0_1_4": [
+          3.8724682331085205,
+          0.013190168887376785,
+          0.024071475490927696
+        ],
+        "/World/MixedKaya/axle_1": [
+          4.04893684387207,
+          -0.08452487736940384,
+          0.04132382944226265
+        ],
+        "/World/MixedKaya/roller_1_0_0": [
+          4.054085731506348,
+          -0.09313943237066269,
+          0.019999347627162933
+        ],
+        "/World/MixedKaya/roller_1_0_1": [
+          4.071539402008057,
+          -0.08306217193603516,
+          0.03489614278078079
+        ],
+        "/World/MixedKaya/roller_1_0_2": [
+          4.064663887023926,
+          -0.08703216165304184,
+          0.05866721644997597
+        ],
+        "/World/MixedKaya/roller_1_0_3": [
+          4.042960166931152,
+          -0.09956300258636475,
+          0.0584617517888546
+        ],
+        "/World/MixedKaya/roller_1_0_4": [
+          4.0364227294921875,
+          -0.10333751142024994,
+          0.034563690423965454
+        ],
+        "/World/MixedKaya/roller_1_1_0": [
+          4.074429988861084,
+          -0.10338144749403,
+          0.02417348511517048
+        ],
+        "/World/MixedKaya/roller_1_1_1": [
+          4.080967426300049,
+          -0.0996069386601448,
+          0.048071540892124176
+        ],
+        "/World/MixedKaya/roller_1_1_2": [
+          4.063304424285889,
+          -0.10980500280857086,
+          0.0626358762383461
+        ],
+        "/World/MixedKaya/roller_1_1_3": [
+          4.0458502769470215,
+          -0.11988227069377899,
+          0.04773908853530884
+        ],
+        "/World/MixedKaya/roller_1_1_4": [
+          4.0527262687683105,
+          -0.11591228097677231,
+          0.02396802045404911
+        ],
+        "/World/MixedKaya/axle_2": [
+          4.049116611480713,
+          0.08569377660751343,
+          0.04132375493645668
+        ],
+        "/World/MixedKaya/roller_2_0_0": [
+          4.054305553436279,
+          0.09428524971008301,
+          0.019999656826257706
+        ],
+        "/World/MixedKaya/roller_2_0_1": [
+          4.036642074584961,
+          0.10448296368122101,
+          0.03456353768706322
+        ],
+        "/World/MixedKaya/roller_2_0_2": [
+          4.043179512023926,
+          0.10070893168449402,
+          0.058461762964725494
+        ],
+        "/World/MixedKaya/roller_2_0_3": [
+          4.064883232116699,
+          0.08817873150110245,
+          0.05866778641939163
+        ],
+        "/World/MixedKaya/roller_2_0_4": [
+          4.0717597007751465,
+          0.08420868217945099,
+          0.03489689156413078
+        ],
+        "/World/MixedKaya/roller_2_1_0": [
+          4.052945613861084,
+          0.11705809831619263,
+          0.02396802231669426
+        ],
+        "/World/MixedKaya/roller_2_1_1": [
+          4.046069145202637,
+          0.12102814763784409,
+          0.04773891717195511
+        ],
+        "/World/MixedKaya/roller_2_1_2": [
+          4.063522815704346,
+          0.11095158010721207,
+          0.06263615936040878
+        ],
+        "/World/MixedKaya/roller_2_1_3": [
+          4.081186771392822,
+          0.10075387358665466,
+          0.048072271049022675
+        ],
+        "/World/MixedKaya/roller_2_1_4": [
+          4.074649333953857,
+          0.10452792048454285,
+          0.0241740420460701
+        ]
+      }
+    },
+    "poses_after": {
+      "frankapanda": {
+        "/World/MixedPanda/panda_hand": [
+          0.2979629337787628,
+          0.25069183111190796,
+          0.4573853015899658
+        ],
+        "/World/MixedPanda/panda_rightfinger": [
+          0.32985761761665344,
+          0.2775266170501709,
+          0.41648077964782715
+        ],
+        "/World/MixedPanda/panda_leftfinger": [
+          0.32985761761665344,
+          0.2775265872478485,
+          0.41648077964782715
+        ],
+        "/World/MixedPanda/panda_link0": [
+          -2.38418573772492e-09,
+          2.98023217215615e-10,
+          2.384185648907078e-08
+        ],
+        "/World/MixedPanda/panda_link1": [
+          -2.384190622706228e-09,
+          2.9802391110500537e-10,
+          0.3329997658729553
+        ],
+        "/World/MixedPanda/panda_link2": [
+          -2.384190622706228e-09,
+          2.9802391110500537e-10,
+          0.3329997658729553
+        ],
+        "/World/MixedPanda/panda_link3": [
+          -0.13020478188991547,
+          -0.10954761505126953,
+          0.5992739200592041
+        ],
+        "/World/MixedPanda/panda_link4": [
+          -0.07701027393341064,
+          -0.06479199230670929,
+          0.6436982750892639
+        ],
+        "/World/MixedPanda/panda_link5": [
+          0.1923607885837555,
+          0.16184432804584503,
+          0.46952202916145325
+        ],
+        "/World/MixedPanda/panda_link6": [
+          0.1923607885837555,
+          0.16184432804584503,
+          0.46952202916145325
+        ],
+        "/World/MixedPanda/panda_link7": [
+          0.2395257204771042,
+          0.20152528584003448,
+          0.5323302745819092
+        ]
+      },
+      "jetbot": {
+        "/World/MixedJetbot/chassis": [
+          2.2262163162231445,
+          0.02563069388270378,
+          0.033498093485832214
+        ],
+        "/World/MixedJetbot/left_wheel": [
+          2.2159295082092285,
+          0.07118362933397293,
+          0.033499009907245636
+        ],
+        "/World/MixedJetbot/right_wheel": [
+          2.2365028858184814,
+          -0.019922304898500443,
+          0.033497877418994904
+        ]
+      },
+      "kaya": {
+        "/World/MixedKaya/base_link": [
+          4.1938958168029785,
+          0.11697502434253693,
+          0.09147485345602036
+        ],
+        "/World/MixedKaya/axle_0": [
+          4.096866130828857,
+          0.10248510539531708,
+          0.0410909466445446
+        ],
+        "/World/MixedKaya/roller_0_0_0": [
+          4.089953899383545,
+          0.08198960870504379,
+          0.05045109614729881
+        ],
+        "/World/MixedKaya/roller_0_0_1": [
+          4.086514472961426,
+          0.10386201739311218,
+          0.0621928907930851
+        ],
+        "/World/MixedKaya/roller_0_0_2": [
+          4.083685874938965,
+          0.12164761871099472,
+          0.04476379603147507
+        ],
+        "/World/MixedKaya/roller_0_0_3": [
+          4.085377216339111,
+          0.11076730489730835,
+          0.022250212728977203
+        ],
+        "/World/MixedKaya/roller_0_0_4": [
+          4.0892510414123535,
+          0.08625730127096176,
+          0.02576516382396221
+        ],
+        "/World/MixedKaya/roller_0_1_0": [
+          4.069726943969727,
+          0.08807250112295151,
+          0.05994127690792084
+        ],
+        "/World/MixedKaya/roller_0_1_1": [
+          4.065853118896484,
+          0.1125825047492981,
+          0.05642632022500038
+        ],
+        "/World/MixedKaya/roller_0_1_2": [
+          4.065149784088135,
+          0.11685020476579666,
+          0.031740378588438034
+        ],
+        "/World/MixedKaya/roller_0_1_3": [
+          4.068589687347412,
+          0.09497777372598648,
+          0.01999858021736145
+        ],
+        "/World/MixedKaya/roller_0_1_4": [
+          4.071418285369873,
+          0.07719219475984573,
+          0.03742768615484238
+        ],
+        "/World/MixedKaya/axle_1": [
+          4.255734443664551,
+          0.041352540254592896,
+          0.04061025008559227
+        ],
+        "/World/MixedKaya/roller_1_0_0": [
+          4.266271591186523,
+          0.03706797957420349,
+          0.01996873877942562
+        ],
+        "/World/MixedKaya/roller_1_0_1": [
+          4.278579235076904,
+          0.046931348741054535,
+          0.03944547474384308
+        ],
+        "/World/MixedKaya/roller_1_0_2": [
+          4.268016338348389,
+          0.038285501301288605,
+          0.0604640394449234
+        ],
+        "/World/MixedKaya/roller_1_0_3": [
+          4.249180793762207,
+          0.023078691214323044,
+          0.05397747829556465
+        ],
+        "/World/MixedKaya/roller_1_0_4": [
+          4.248102188110352,
+          0.022326219826936722,
+          0.028950009495019913
+        ],
+        "/World/MixedKaya/roller_1_1_0": [
+          4.286855697631836,
+          0.02919316105544567,
+          0.027073934674263
+        ],
+        "/World/MixedKaya/roller_1_1_1": [
+          4.287933826446533,
+          0.029945634305477142,
+          0.05210140347480774
+        ],
+        "/World/MixedKaya/roller_1_1_2": [
+          4.2697649002075195,
+          0.015203886665403843,
+          0.06108267232775688
+        ],
+        "/World/MixedKaya/roller_1_1_3": [
+          4.257457256317139,
+          0.005340509116649628,
+          0.041605934500694275
+        ],
+        "/World/MixedKaya/roller_1_1_4": [
+          4.268020153045654,
+          0.01398636493831873,
+          0.020587380975484848
+        ],
+        "/World/MixedKaya/axle_2": [
+          4.229368209838867,
+          0.20951567590236664,
+          0.04122697189450264
+        ],
+        "/World/MixedKaya/roller_2_0_0": [
+          4.2225470542907715,
+          0.22283899784088135,
+          0.059431809931993484
+        ],
+        "/World/MixedKaya/roller_2_0_1": [
+          4.24586820602417,
+          0.21387937664985657,
+          0.0574459470808506
+        ],
+        "/World/MixedKaya/roller_2_0_2": [
+          4.251333713531494,
+          0.21184507012367249,
+          0.033071935176849365
+        ],
+        "/World/MixedKaya/roller_2_0_3": [
+          4.231390476226807,
+          0.21954742074012756,
+          0.01999383233487606
+        ],
+        "/World/MixedKaya/roller_2_0_4": [
+          4.21359920501709,
+          0.22634202241897583,
+          0.036285143345594406
+        ],
+        "/World/MixedKaya/roller_2_1_0": [
+          4.241337299346924,
+          0.2360076606273651,
+          0.06254628300666809
+        ],
+        "/World/MixedKaya/roller_2_1_1": [
+          4.259128570556641,
+          0.22921302914619446,
+          0.04625498130917549
+        ],
+        "/World/MixedKaya/roller_2_1_2": [
+          4.250180721282959,
+          0.23271608352661133,
+          0.023108307272195816
+        ],
+        "/World/MixedKaya/roller_2_1_3": [
+          4.2268595695495605,
+          0.24167567491531372,
+          0.025094183161854744
+        ],
+        "/World/MixedKaya/roller_2_1_4": [
+          4.221394062042236,
+          0.2437100112438202,
+          0.04946817830204964
+        ]
+      }
+    }
+  },
+  "cleanup": {
+    "timeline": "stopped",
+    "scratch_world_children": 0,
+    "external_providers_enabled": false
+  },
+  "evidence_directory": "test_outputs/mcp-recheck-20261112-135623"
+}

@@ -79,7 +79,17 @@ async def _capture(session: ClientSession, output_type: str) -> dict[str, Any]:
 
 async def _delete_scratch(session: ClientSession) -> None:
     errors = []
-    for prim_path in (CAMERA_PATH, TARGET_PATH, LIGHT_PATH):
+    # Called both before fixture creation and after capture. Do not send delete
+    # commands for absent prims: Kit logs those as errors despite a success reply.
+    response = _payload(await session.call_tool("execute_script", {"code": f"""
+import json, omni.usd
+stage = omni.usd.get_context().get_stage()
+print(json.dumps([path for path in {(CAMERA_PATH, TARGET_PATH, LIGHT_PATH)!r}
+ if stage.GetPrimAtPath(path).IsValid()]))
+"""}))
+    assert response["status"] == "success", response
+    existing = json.loads(response["data"]["stdout"].strip().splitlines()[-1])
+    for prim_path in existing:
         try:
             deleted = _payload(await session.call_tool("delete_object", {"prim_path": prim_path}))
             if deleted["status"] != "success":

@@ -285,7 +285,7 @@ class _DriveAdapter(RobotRuntime):
         return self.engine
 
     def _ensure_physics_world(self):
-        return None
+        raise AssertionError("USD drive inspection/authoring must not initialize physics")
 
     def _drive_config_articulation(self, _prim_path):
         return self.art

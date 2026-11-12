@@ -340,7 +340,7 @@ def test_v6_holonomic_accepts_experimental_sequence_and_reorders_names(monkeypat
 
     adapter = object.__new__(IsaacAdapterV6)
     scene = types.SimpleNamespace(get_stage=lambda: types.SimpleNamespace(GetPrimAtPath=lambda _path: _Prim()))
-    adapter._robot_runtime = RobotRuntime(scene, object(), object())
+    adapter._robot_runtime = RobotRuntime(scene, object(), types.SimpleNamespace(isaac_version="6.0.1"))
     result = adapter.compute_holonomic_wheel_velocities(
         "/World/Kaya",
         "/World/Kaya/base_link/control_offset",

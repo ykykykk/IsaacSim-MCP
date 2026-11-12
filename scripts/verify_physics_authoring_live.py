@@ -77,6 +77,12 @@ print(json.dumps({"root": str(root.GetPath()), "mesh": str(mesh.GetPath())}))
             "prim_path": f"{ROOT}/PrismaticBody", "body_type": "kinematic", "collider_enabled": True,
             "density_kg_m3": 850.0,
         }))
+        # The kinematic authoring check above is separate from joint simulation:
+        # a world-to-kinematic joint has no dynamic body and PhysX rejects it.
+        evidence["prismatic_dynamic_body"] = _readback(connection.send_command("physics.configure_body", {
+            "prim_path": f"{ROOT}/PrismaticBody", "body_type": "dynamic", "collider_enabled": True,
+            "density_kg_m3": 850.0,
+        }))
         _data(connection.send_command("physics.configure_body", {
             "prim_path": f"{ROOT}/FixedAnchor", "body_type": "static", "collider_enabled": False,
         }))

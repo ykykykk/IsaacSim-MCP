@@ -35,6 +35,10 @@ class RobotPolicyBridge:
     def active_backend(self) -> str:
         return str(getattr(self._adapter(), "_engine", "unknown"))
 
+    @property
+    def isaac_version(self) -> str:
+        return self._adapter()._isaacsim_version
+
     def get_simulation_state(self) -> Dict[str, Any]:
         return self._adapter().get_simulation_state()
 
@@ -238,8 +242,15 @@ class RobotRuntime:
         joint_names: List[str] = []
         num_dof = 0
         try:
-            self._ensure_physics_world()
-            art = self._runtime_articulation(prim_path)
+            # Discovery is also called after each robots.create. Starting native
+            # physics here leaves later assets inserted into a running GPU scene
+            # even though the timeline still says stopped. Query authored DOF
+            # metadata until the caller explicitly starts/steps the simulation.
+            art = (
+                self._drive_config_articulation(prim_path)
+                if self.get_simulation_state()["timeline_state"] == "stopped"
+                else self._runtime_articulation(prim_path)
+            )
             joint_names = list(art.dof_names) if art.dof_names else []
             num_dof = int(art.num_dofs) if art.num_dofs else 0
         except Exception as e:
@@ -486,8 +497,7 @@ class RobotRuntime:
         command: Sequence[float],
         joint_names: Sequence[str],
     ) -> List[float]:
-        """Use NVIDIA's V6 USD setup and QP controller for a Kaya profile."""
-        from isaacsim.robot.experimental.wheeled_robots.controllers import HolonomicController
+        """Use NVIDIA's authored wheel geometry and version-matched controller."""
         from isaacsim.robot.experimental.wheeled_robots.robots import HolonomicRobotUsdSetup
 
         stage = self.get_stage()
@@ -499,25 +509,57 @@ class RobotRuntime:
         wheel_radius, wheel_positions, wheel_orientations, mecanum_angles, wheel_axis, up_axis = (
             setup.get_holonomic_controller_params()
         )
-        controller = HolonomicController(
-            wheel_radius=wheel_radius,
-            wheel_positions=wheel_positions,
-            wheel_orientations=wheel_orientations,
-            mecanum_angles=mecanum_angles,
-            wheel_axis=wheel_axis,
-            up_axis=up_axis,
-        )
-        action = controller.forward(np.asarray(command, dtype=np.float64))
-        # Isaac Sim 6 experimental HolonomicController returns an ndarray;
-        # older controller variants wrap it in ArticulationAction.
-        values = getattr(action, "joint_velocities", action)
-        if values is None or len(values) != len(wheel_positions):
-            raise RuntimeError("HolonomicController returned an invalid wheel velocity vector")
         setup_names = list(setup.get_articulation_controller_params())
         if len(set(setup_names)) != len(setup_names) or set(setup_names) != set(joint_names):
             raise ValueError(
                 f"USD mecanum joint names {setup_names} do not exactly match profile joints {list(joint_names)}"
             )
+        geometry = dict(
+            wheel_radius=wheel_radius,
+            wheel_positions=wheel_positions,
+            wheel_orientations=wheel_orientations,
+            mecanum_angles=mecanum_angles,
+            wheel_axis=wheel_axis,
+        )
+        version = tuple(int(part) for part in self._bridge.isaac_version.split("-")[0].split(".")[:2])
+        if version >= (6, 2):
+            import warp as wp
+            from isaacsim.robot_motion.controllers import HolonomicController
+            from isaacsim.robot_motion.experimental.motion_generation import RobotState, SpatialState
+
+            # Use the shipped body-twist controller rather than patching NVIDIA
+            # files or hiding the legacy QP's yaw scaling with an empirical gain.
+            controller = HolonomicController(
+                robot_joint_space=setup_names,
+                wheel_joint_names=setup_names,
+                rotation_direction=up_axis,
+                **geometry,
+            )
+            controller.reset(RobotState(), RobotState(), 0.0)
+            site = "control_point"
+            setpoint = RobotState(
+                sites=SpatialState.from_name(
+                    spatial_space=[site],
+                    linear_velocities=([site], wp.array([[command[0], command[1], 0.0]], dtype=wp.float32)),
+                    angular_velocities=([site], wp.array([[0.0, 0.0, command[2]]], dtype=wp.float32)),
+                )
+            )
+            desired = controller.forward(None, setpoint, 0.0)
+            if desired is None or desired.joints is None:
+                raise RuntimeError("HolonomicController returned no joint velocity targets")
+            setup_names = list(desired.joints.velocity_names)
+            if len(setup_names) != len(joint_names) or set(setup_names) != set(joint_names):
+                raise RuntimeError("HolonomicController returned unexpected wheel joint names")
+            values = desired.joints.velocities.numpy().reshape(-1).tolist()
+        else:
+            # Preserve the existing 6.0/6.1 API; the new controller is 6.2-only.
+            from isaacsim.robot.experimental.wheeled_robots.controllers import HolonomicController
+
+            controller = HolonomicController(up_axis=up_axis, **geometry)
+            action = controller.forward(np.asarray(command, dtype=np.float64))
+            values = getattr(action, "joint_velocities", action)
+        if values is None or len(values) != len(wheel_positions) or not all(math.isfinite(float(v)) for v in values):
+            raise RuntimeError("HolonomicController returned an invalid wheel velocity vector")
         by_name = dict(zip(setup_names, values))
         return [float(by_name[name]) for name in joint_names]
 
@@ -554,7 +596,6 @@ class RobotRuntime:
 
     def get_joint_drive_config(self, prim_path: str) -> Dict[str, Any]:
         """Read typed drive configuration using the V6 Articulation USD backend."""
-        self._ensure_physics_world()
         art = self._drive_config_articulation(prim_path)
         names = list(art.dof_names or [])
         types = [self._joint_type_name(value) for value in list(art.dof_types or [])]
@@ -671,7 +712,6 @@ class RobotRuntime:
         joint_indices: Optional[List[int]] = None,
     ) -> None:
         """Author selected USD drive fields and restore every changed opinion on failure."""
-        self._ensure_physics_world()
         state = self.get_simulation_state()
         if str(state.get("timeline_state", "unknown")).lower() != "stopped":
             raise RuntimeError("Drive configuration requires a stopped timeline")
@@ -782,23 +822,27 @@ class RobotRuntime:
     def get_joint_config(self, prim_path: str) -> Dict[str, Any]:
         from pxr import Usd, UsdPhysics
 
-        self._ensure_physics_world()
         stage = self.get_stage()
         prim = stage.GetPrimAtPath(prim_path)
         if not prim.IsValid():
             raise ValueError(f"Prim not found: {prim_path}")
-        joint_names = self._get_joint_names(prim_path)
-        current_pos_list = self.get_joint_positions(prim_path)
         typed_drive = self.get_joint_drive_config(prim_path)
         typed_drive_by_name = {joint["name"]: joint for joint in typed_drive["joints"]}
+        stopped = self.get_simulation_state()["timeline_state"] == "stopped"
+        joint_names = (
+            [joint["name"] for joint in typed_drive["joints"]] if stopped else self._get_joint_names(prim_path)
+        )
+        # A stopped scene has authored targets, not a measured tensor state.
+        current_pos_list = [] if stopped else self.get_joint_positions(prim_path)
 
         runtime_targets: List[float] = []
         try:
-            art = self._new_articulation(prim_path)
-            targets = art.get_dof_position_targets()
-            if targets is not None:
-                arr = targets.numpy() if hasattr(targets, "numpy") else np.asarray(targets)
-                runtime_targets = arr.reshape(-1).tolist()
+            if not stopped:
+                art = self._new_articulation(prim_path)
+                targets = art.get_dof_position_targets()
+                if targets is not None:
+                    arr = targets.numpy() if hasattr(targets, "numpy") else np.asarray(targets)
+                    runtime_targets = arr.reshape(-1).tolist()
         except Exception:
             pass
 
@@ -830,6 +874,8 @@ class RobotRuntime:
                         joint_data["stiffness"] = stiffness_attr.Get() if stiffness_attr else None
                         joint_data["damping"] = damping_attr.Get() if damping_attr else None
                         joint_data["target_position"] = target_attr.Get() if target_attr else None
+                        if joint_data["target_position"] is not None and joint_type == "revolute":
+                            joint_data["target_position"] = math.radians(joint_data["target_position"])
                         break
                 jname = desc.GetName()
                 if jname in typed_drive_by_name:
