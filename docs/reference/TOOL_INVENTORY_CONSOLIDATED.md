@@ -2,9 +2,9 @@
 
 > 由 `scripts/generate_tool_inventory.py` 從 `isaac_mcp/tools/*.py` 與 `isaac_mcp/tool_profiles.py` 自動產生，請勿手工修改。
 
-Package version：`0.6.0`
+Package version：`0.6.0+bauma.20261112`
 Tool profile：`consolidated`
-Source-derived tool count：`99`
+Source-derived tool count：`103`
 
 | Module | 數量 | Named tools |
 |---|---:|---|
@@ -17,6 +17,7 @@ Source-derived tool count：`99`
 | `humans` | 5 | `bake_navmesh`, `delete_human`, `get_navmesh_status`, `set_human_behavior`, `spawn_human` |
 | `jobs` | 2 | `list_jobs`, `start_job` |
 | `motion` | 3 | `compute_ik`, `execute_trajectory`, `plan_joint_trajectory` |
+| `mpm` | 4 | `get_mpm_config`, `get_mpm_status`, `request_mpm_rebuild`, `update_mpm_config` |
 | `objects` | 4 | `clone_object`, `create_object`, `delete_object`, `transform_object` |
 | `replicator` | 5 | `create_sdg_job`, `delete_sdg_job`, `get_replicator_status`, `get_sdg_manifest`, `start_sdg_job` |
 | `robots` | 5 | `create_robot`, `get_joint_state`, `get_robot_info`, `set_joint_command`, `set_joint_drive_config` |

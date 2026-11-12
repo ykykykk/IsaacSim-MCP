@@ -2,9 +2,9 @@
 
 > 由 `scripts/generate_tool_inventory.py` 從 `isaac_mcp/tools/*.py` 與 `isaac_mcp/tool_profiles.py` 自動產生，請勿手工修改。
 
-Package version：`0.6.0`
+Package version：`0.6.0+bauma.20261112`
 Tool profile：`legacy`
-Source-derived tool count：`130`
+Source-derived tool count：`134`
 
 | Module | 數量 | Named tools |
 |---|---:|---|
@@ -18,6 +18,7 @@ Source-derived tool count：`130`
 | `lighting` | 2 | `create_light`, `modify_light` |
 | `materials` | 4 | `apply_material`, `create_material`, `get_material`, `get_material_binding` |
 | `motion` | 5 | `cancel_motion`, `compute_ik`, `execute_trajectory`, `get_motion_status`, `plan_joint_trajectory` |
+| `mpm` | 4 | `get_mpm_config`, `get_mpm_status`, `request_mpm_rebuild`, `update_mpm_config` |
 | `objects` | 4 | `clone_object`, `create_object`, `delete_object`, `transform_object` |
 | `physics` | 6 | `configure_physics_body`, `create_collision_group`, `create_physics_joint`, `get_collision_group`, `get_physics_body`, `get_physics_joint` |
 | `replicator` | 7 | `cancel_sdg_job`, `create_sdg_job`, `delete_sdg_job`, `get_replicator_status`, `get_sdg_job_status`, `get_sdg_manifest`, `start_sdg_job` |

@@ -3,8 +3,8 @@
 
 [CmdletBinding()]
 param(
-    [string]$IsaacSimRoot = $(if ($env:ISAACSIM_ROOT) { $env:ISAACSIM_ROOT } else { "C:\isaacsim" }),
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8766 }),
+    [string]$IsaacSimRoot = $(if ($env:ISAACSIM_ROOT) { $env:ISAACSIM_ROOT } else { "F:\isaac-sim\6.2.0" }),
+    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
     [string]$PhysicsGpu,
     [ValidateRange(0, 100)]
     [int]$MaxRestarts = 3,
@@ -27,7 +27,7 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
 
 if ([string]::IsNullOrWhiteSpace($StateFile)) {
     $stateRoot = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { [System.IO.Path]::GetTempPath() }
-    $StateFile = Join-Path $stateRoot "IsaacSim-MCP\runtime-state.json"
+    $StateFile = Join-Path $stateRoot "IsaacSim-MCP\6.2\runtime-$Port.json"
 }
 $StateFile = [System.IO.Path]::GetFullPath($StateFile)
 $env:ISAAC_MCP_RUNTIME_STATE_FILE = $StateFile

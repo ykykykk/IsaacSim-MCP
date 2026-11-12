@@ -4,7 +4,7 @@
 
 [CmdletBinding()]
 param(
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8766 }),
+    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$ServerArgs
 )

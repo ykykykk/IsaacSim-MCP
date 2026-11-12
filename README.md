@@ -1,5 +1,8 @@
 # IsaacSim-MCP
 
+> 本机维护版：Isaac Sim 6.2 / `0.6.0+bauma.20261112`，基于 Tim 修复分支 `4bb95d8`。
+> 安装路径、MPM 工具与回退说明见 [本机 6.2 配置](docs/ISAAC_6_2_LOCAL.md)。下文保留上游兼容性与历史验证范围。
+
 IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控制 NVIDIA Isaac Sim。涵蓋 USD 場景、機器人、感測器、物理、Action Graph、ROS 2、Replicator SDG、動畫人物、NVIDIA 資產與模擬控制。
 
 主要驗證環境是 Windows 與 Isaac Sim 6.0.1。本專案延伸自 [whats2000/isaacsim-mcp-server](https://github.com/whats2000/isaacsim-mcp-server)，沿用 MIT License。

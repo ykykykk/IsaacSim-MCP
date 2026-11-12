@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Mapping, Optional
 
 from .. import __version__
@@ -40,6 +41,7 @@ RELEVANT_EXTENSIONS = (
     "omni.graph.core",
     "omni.graph.action",
     "omni.graph.scriptnode",
+    "sany.granular_mpm",
 )
 
 
@@ -127,7 +129,13 @@ def _runtime_info(adapter: IsaacAdapterBase) -> Dict[str, Any]:
     except Exception:
         stage_available = None
 
+    import carb.settings
+    import carb.tokens
+
+    log_file = carb.settings.get_settings().get("/log/file")
     return {
+        "process_id": os.getpid(),
+        "log_file": carb.tokens.get_tokens_interface().resolve(log_file) if log_file else None,
         "isaac_sim_version": isaac_sim_version,
         "adapter": adapter_name,
         "adapter_generation": adapter_generation,

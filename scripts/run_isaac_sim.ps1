@@ -5,7 +5,7 @@
 [CmdletBinding()]
 param(
     [string]$IsaacSimRoot = $env:ISAACSIM_ROOT,
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8766 }),
+    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
     [string]$PhysicsGpu,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$IsaacArgs
@@ -104,7 +104,7 @@ if (-not (Test-Path -LiteralPath $extensionManifest)) {
 
 if (-not $IsaacSimRoot) {
     $candidates = @(
-        "C:\isaacsim"
+        "F:\isaac-sim\6.2.0"
     )
     $IsaacSimRoot = $candidates | Where-Object {
         (Test-Path -LiteralPath (Join-Path $_ "isaac-sim.bat")) -or
@@ -113,7 +113,7 @@ if (-not $IsaacSimRoot) {
 }
 
 if (-not $IsaacSimRoot -or -not (Test-Path -LiteralPath $IsaacSimRoot)) {
-    throw "Isaac Sim 6.0.1 was not found. Set ISAACSIM_ROOT to its install or Python environment root."
+    throw "Isaac Sim 6.2.0 was not found. Set ISAACSIM_ROOT to its install or Python environment root."
 }
 
 $IsaacSimRoot = (Resolve-Path -LiteralPath $IsaacSimRoot).Path
@@ -133,9 +133,9 @@ elseif (Test-Path -LiteralPath $pipAppFile) {
     }
 }
 
-if (-not $version -or $version -notmatch '^6\.0\.1(?:\.|-|$)') {
+if (-not $version -or $version -notmatch '^6\.2\.0(?:\.|-|$)') {
     $displayVersion = if ($version) { $version } else { "unknown" }
-    throw "Isaac Sim 6.0.1 is required for this Windows port baseline; found $displayVersion at $IsaacSimRoot."
+    throw "Isaac Sim 6.2.0 is required for this local installation; found $displayVersion at $IsaacSimRoot."
 }
 
 $launcher = if (Test-Path -LiteralPath $batchLauncher) {

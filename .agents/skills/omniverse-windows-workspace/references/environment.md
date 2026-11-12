@@ -6,8 +6,8 @@ Recheck all values before acting because paths, versions, and branches can chang
 
 | Component | Resolution order | Windows fallback |
 | --- | --- | --- |
-| MCP repository | `-RepositoryRoot`, `ISAACSIM_MCP_REPO`, upward discovery, canonical fallback, legacy fallback | `F:\IsaacSim-MCP`; older checkouts: `D:\Dev\IsaacSim-MCP`, `D:\Dev\isaacsim-mcp-server` |
-| Isaac Sim | `-IsaacSimRoot`, `ISAACSIM_ROOT`, fallback | `C:\isaacsim` |
+| MCP repository | `-RepositoryRoot`, `ISAACSIM_MCP_REPO`, upward discovery, canonical fallback, legacy fallback | `F:\Resources\Projects\Software\IsaacSim-MCP`; older checkouts: `D:\Dev\IsaacSim-MCP`, `D:\Dev\isaacsim-mcp-server` |
+| Isaac Sim | `-IsaacSimRoot`, `ISAACSIM_ROOT`, fallback | `F:\isaac-sim\6.2.0` |
 | Isaac Lab | `-IsaacLabRoot`, `ISAACLAB_ROOT`, fallback | `D:\IsaacLab` |
 | Extension socket port | `ISAAC_MCP_PORT`, fallback | `8766` |
 | Documentation MCP stack | `OMNIVERSE_AGENT_STACK_ROOT`, optional | none |
@@ -16,7 +16,7 @@ Use `scripts\check-environment.ps1 -AsJson` when another agent needs structured 
 
 Set `ISAACSIM_MCP_REPO` on machines where the skill is installed globally and the repository uses a different location.
 
-On the maintained Windows research machine, `F:\IsaacSim-MCP` is the canonical GitHub checkout. The similarly named `D:\Dev\IsaacSim-MCP` and `D:\Dev\isaacsim-mcp-server` paths are older checkouts and must not be selected when the canonical checkout exists.
+On the maintained Windows research machine, `F:\Resources\Projects\Software\IsaacSim-MCP` is the canonical GitHub checkout. The similarly named `D:\Dev\IsaacSim-MCP` and `D:\Dev\isaacsim-mcp-server` paths are older checkouts and must not be selected when the canonical checkout exists.
 
 ## Python/runtime rule
 
@@ -29,7 +29,7 @@ Normal system Python does not provide the complete Kit runtime. Run Isaac-bound 
 When `ISAACSIM_ROOT` is unset and the default installation is used:
 
 ```powershell
-& 'C:\isaacsim\python.bat' <script.py>
+& 'F:\isaac-sim\6.2.0\python.bat' <script.py>
 ```
 
 Some `omni.*` modules require `SimulationApp` or a Kit application to initialize before import. A successful static import does not prove the live stage or extensions are ready.

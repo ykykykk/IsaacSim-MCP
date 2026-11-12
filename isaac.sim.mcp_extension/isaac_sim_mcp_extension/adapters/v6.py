@@ -435,6 +435,9 @@ class IsaacAdapterV6(IsaacAdapterBase):
     ) -> Dict[str, Any]:
         return self._physics_runtime.configure_physics(gravity, time_step, gpu_enabled)
 
+    def get_physics_params(self) -> Dict[str, Any]:
+        return self._physics_runtime.get_physics_params()
+
     def configure_physics_body(
         self,
         prim_path: str,

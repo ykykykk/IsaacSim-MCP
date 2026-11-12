@@ -114,6 +114,7 @@ def run_supervisor(
 
     while True:
         attempt = restart_count + 1
+        runtime_identity: dict[str, Any] | None = None
         starting_state = "starting" if restart_count == 0 else "restarting"
         write_state(
             config.state_file,
@@ -153,6 +154,7 @@ def run_supervisor(
                 was_ready = was_ready or responding
                 if responding:
                     last_healthy_at = last_health.get("checked_at")
+                    runtime_identity = last_health.get("runtime")
                 live_state = "ready" if responding else ("unresponsive" if was_ready else starting_state)
                 write_state(
                     config.state_file,
@@ -169,8 +171,9 @@ def run_supervisor(
                         runtime_pid_provenance="legacy_alias_of_launcher_pid",
                         launcher_pid=getattr(process, "pid", None),
                         launcher_pid_provenance="supervisor_child_process",
-                        kit_pid=None,
-                        kit_pid_provenance="unknown_not_exposed_by_system.get_capabilities",
+                        kit_pid=runtime_identity.get("process_id") if runtime_identity else None,
+                        kit_pid_provenance="endpoint_capabilities" if runtime_identity else "unknown",
+                        runtime_identity=runtime_identity,
                         last_crash=last_crash,
                         last_healthy_at=last_healthy_at,
                         health=last_health,
@@ -203,7 +206,10 @@ def run_supervisor(
             "was_ready": was_ready,
             "last_health": last_health,
         }
-        diagnostics = diagnostics_reader()
+        diagnostics = (
+            read_runtime_diagnostics(runtime_identity["log_file"], source="endpoint_capabilities")
+            if runtime_identity and runtime_identity.get("log_file") else diagnostics_reader()
+        )
         if diagnostics.get("available") and (
             diagnostics.get("crash_detected") or diagnostics.get("diagnostic_lines")
         ):

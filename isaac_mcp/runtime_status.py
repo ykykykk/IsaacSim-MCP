@@ -20,6 +20,7 @@ MAX_LOG_SCAN_BYTES = 1024 * 1024
 MAX_DIAGNOSTIC_LINES = 24
 RECENT_LOG_SECONDS = 24 * 60 * 60
 MAX_IDENTITY_STATE_AGE_SECONDS = 5 * 60
+_LAST_ENDPOINT_RUNTIME: dict[tuple[str, int], dict[str, Any]] = {}
 
 _LOG_LINE_MARKERS = (
     "[error]",
@@ -45,6 +46,10 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def remember_runtime_identity(host: str, port: int, runtime: Mapping[str, Any]) -> None:
+    _LAST_ENDPOINT_RUNTIME[(host, port)] = {**runtime, "observed_at": utc_now()}
+
+
 def default_state_file() -> Path:
     configured = os.getenv("ISAAC_MCP_RUNTIME_STATE_FILE")
     if configured:
@@ -55,7 +60,8 @@ def default_state_file() -> Path:
         base = Path(os.environ["XDG_STATE_HOME"])
     else:
         base = Path.home() / ".local" / "state"
-    return base / "IsaacSim-MCP" / "runtime-state.json"
+    port = int(os.getenv("ISAAC_MCP_PORT", "8766"))
+    return base / "IsaacSim-MCP" / "6.2" / f"runtime-{port}.json"
 
 
 def _kit_log_candidates() -> tuple[list[Path], str]:
@@ -63,7 +69,9 @@ def _kit_log_candidates() -> tuple[list[Path], str]:
     if configured:
         return [Path(configured).expanduser()], "configured"
 
-    kit_root = Path.home() / ".nvidia-omniverse" / "logs" / "Kit"
+    configured_root = os.getenv("ISAAC_MCP_KIT_LOG_ROOT")
+    kit_root = (Path(configured_root).expanduser() if configured_root else
+                Path.home() / ".nvidia-omniverse" / "logs" / "Kit")
     if not kit_root.is_dir():
         return [], "automatic"
     try:
@@ -74,7 +82,7 @@ def _kit_log_candidates() -> tuple[list[Path], str]:
         )
     except OSError:
         candidates = []
-    return candidates, "automatic"
+    return candidates, "configured_root" if configured_root else "automatic"
 
 
 def _configured_or_latest_kit_log() -> tuple[Path | None, str]:
@@ -262,11 +270,15 @@ def probe_runtime_health(*, host: str, port: int, timeout: float | None = None) 
             if response is None:
                 raise ValueError("runtime returned incomplete health JSON")
         responding = isinstance(response, Mapping) and response.get("status") == "success"
+        runtime = response.get("data", {}).get("runtime", {}) if responding else {}
+        if responding:
+            remember_runtime_identity(host, port, runtime)
         return {
             "responding": responding,
             "port_open": True,
             "checked_at": checked_at,
             "error": None if responding else "capability health response was not successful",
+            "runtime": runtime,
         }
     except (OSError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
         return {
@@ -369,7 +381,22 @@ def get_runtime_status(
     stored_host = state.get("host")
     identity_status, identity_error = _identity_problem(state, host=host, port=effective_port)
     health = probe_runtime_health(host=host, port=effective_port)
-    diagnostics = read_runtime_diagnostics()
+    endpoint = (host, effective_port)
+    current_runtime = health.get("runtime")
+    if health.get("responding") and isinstance(current_runtime, dict):
+        _LAST_ENDPOINT_RUNTIME[endpoint] = {**current_runtime, "observed_at": health["checked_at"]}
+    runtime_identity = _LAST_ENDPOINT_RUNTIME.get(endpoint)
+    if runtime_identity is None and identity_status is None:
+        runtime_identity = state.get("runtime_identity")
+    if runtime_identity and runtime_identity.get("log_file"):
+        diagnostics = read_runtime_diagnostics(runtime_identity["log_file"], source="endpoint_capabilities")
+        diagnostics["endpoint_bound"] = True
+        diagnostics["runtime_process_id"] = runtime_identity.get("process_id")
+    else:
+        diagnostics = read_runtime_diagnostics()
+        # A recent file in a version directory is useful context, not evidence
+        # that this particular endpoint crashed. Never promote it to current state.
+        diagnostics["endpoint_bound"] = False
     last_crash = state.get("last_crash")
     if isinstance(last_crash, dict) and not isinstance(last_crash.get("diagnostics"), dict):
         previous = read_previous_crash_diagnostics(exclude=diagnostics.get("log_path"))
@@ -387,11 +414,11 @@ def get_runtime_status(
             state["state"] = "endpoint_mismatch"
     if responding:
         state["state"] = "ready"
-    elif state.get("state") == "ready":
-        state["state"] = "unresponsive"
     elif (
         diagnostics.get("crash_detected")
         and diagnostics.get("recent")
+        and diagnostics.get("endpoint_bound")
+        and not health.get("port_open")
         and state.get("state")
         not in {"starting", "restarting", "restart_backoff", "stopped", "supervisor_interrupted"}
     ):
@@ -399,6 +426,18 @@ def get_runtime_status(
         # Extension socket disappears. Log evidence must therefore be able to
         # mark this state as crashed before process.poll() returns.
         state["state"] = "crashed"
+    elif health.get("port_open") or state.get("state") == "ready":
+        if state.get("state") not in {"starting", "restarting", "restart_backoff"}:
+            state["state"] = "unresponsive"
+    # A protocol timeout cannot distinguish a long main-thread operation from a
+    # hung host. Keep that uncertainty explicit instead of asserting a crash.
+    state["activity"] = (
+        "responsive" if responding else
+        "starting" if state.get("state") in {"starting", "restarting", "restart_backoff"} else
+        "crashed" if state.get("state") in {"crashed", "recovery_failed"} else
+        "busy_or_unresponsive" if health.get("port_open") else "disconnected"
+    )
+    state["runtime_identity"] = runtime_identity
     state["runtime_responding"] = responding
     state["health"] = health
     state["diagnostics"] = diagnostics

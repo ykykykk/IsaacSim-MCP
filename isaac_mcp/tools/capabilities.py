@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 from isaac_mcp import __version__
 from isaac_mcp.runtime_status import IsaacRuntimeUnavailableError
+from isaac_mcp.runtime_status import remember_runtime_identity
 from isaac_mcp.runtime_status import get_runtime_status as read_runtime_status
 from isaac_mcp.tool_inventory import tool_count
 from isaac_mcp.tool_profiles import CONSOLIDATED_REPLACEMENTS, VALID_TOOL_PROFILES
@@ -34,6 +35,8 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         try:
             conn = get_connection()
             result = conn.send_command("system.get_capabilities")
+            if result.get("status") == "success":
+                remember_runtime_identity(conn.host, conn.port, result.get("data", {}).get("runtime", {}))
             tool_profile = str(getattr(mcp, "tool_profile", "legacy"))
             result.setdefault("data", {})["mcp_server"] = {
                 "name": "isaacsim-mcp-server",

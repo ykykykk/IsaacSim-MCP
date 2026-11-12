@@ -37,6 +37,7 @@ import isaac_sim_mcp_extension.handlers.humans as humans_mod
 import isaac_sim_mcp_extension.handlers.lighting as lighting_mod
 import isaac_sim_mcp_extension.handlers.materials as materials_mod
 import isaac_sim_mcp_extension.handlers.motion as motion_mod
+import isaac_sim_mcp_extension.handlers.mpm as mpm_mod
 import isaac_sim_mcp_extension.handlers.objects as objects_mod
 import isaac_sim_mcp_extension.handlers.physics as physics_mod
 import isaac_sim_mcp_extension.handlers.robots as robots_mod
@@ -76,6 +77,7 @@ for module in (
     lighting_mod,
     materials_mod,
     motion_mod,
+    mpm_mod,
     objects_mod,
     physics_mod,
     robots_mod,
