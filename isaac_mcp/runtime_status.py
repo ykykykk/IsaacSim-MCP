@@ -376,8 +376,12 @@ def _last_mpm_jobs(port, runtime_identity):
         if path.stat().st_size > 131072:
             raise ValueError("Task journal exceeds 128 KiB")
         record = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(record, dict) or not isinstance(record.get("jobs"), list):
+            raise ValueError("Invalid task journal structure")
         identity = runtime_identity or {}
-        jobs = record.get("jobs", [])[-32:]
+        jobs = record["jobs"][-32:]
+        if any(not isinstance(job, dict) or (job.get("context") is not None and not isinstance(job["context"], dict)) for job in jobs):
+            raise ValueError("Invalid task journal entry")
         bound = bool(identity.get("instance_id") and record.get("process_id") == identity.get("process_id")
                      and any((job.get("context") or {}).get("instance_id") == identity["instance_id"] for job in jobs))
         return {"available": True, "path": str(path), "last_known_only": True,
