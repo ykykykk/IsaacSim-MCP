@@ -100,7 +100,7 @@ def _extension_states(manager=None) -> Dict[str, Dict[str, Any]]:
     return states
 
 
-def _runtime_info(adapter: IsaacAdapterBase) -> Dict[str, Any]:
+def _runtime_info(adapter: IsaacAdapterBase, manager=None) -> Dict[str, Any]:
     adapter_name = type(adapter).__name__
     adapter_generation = 6 if "V6" in adapter_name else 5 if "V5" in adapter_name else None
 
@@ -127,35 +127,51 @@ def _runtime_info(adapter: IsaacAdapterBase) -> Dict[str, Any]:
         except Exception:
             pass
 
+    diagnostics = {}
     try:
-        stage_available = adapter.get_stage() is not None
-    except Exception:
-        stage_available = None
+        stage = adapter.get_stage()
+        stage_available = stage is not None
+    except Exception as exc:
+        stage, stage_available = None, None
+        diagnostics["stage"] = str(exc)
 
-    import carb.settings
-    import carb.tokens
-
-    log_file = carb.settings.get_settings().get("/log/file")
-    from ..workflow_context import context
+    log_file = None
+    try:
+        import carb.settings
+        import carb.tokens
+        raw_log = carb.settings.get_settings().get("/log/file")
+        log_file = carb.tokens.get_tokens_interface().resolve(raw_log) if raw_log else None
+    except Exception as exc:
+        diagnostics["log_file"] = str(exc)
     from .. import __file__ as module_path
-    manager = _extension_manager()
-    extension_id = manager.get_enabled_extension_id(EXTENSION_ID)
+    from ..workflow_context import context
+    origin = None
+    try:
+        manager = manager if manager is not None else _extension_manager()
+        extension_id = manager.get_enabled_extension_id(EXTENSION_ID)
+        origin = manager.get_extension_path(extension_id) if extension_id else None
+    except Exception as exc:
+        diagnostics["extension_origin"] = str(exc)
     providers = {}
     for extension, module in (("sany.granular_mpm", "sany.granular_mpm.agent_api"),
                               ("bauma.save_to_source", "bauma.save_to_source.agent_api")):
-        enabled = manager.is_extension_enabled(extension)
-        api = sys.modules.get(module)
-        providers[extension] = {"enabled": bool(enabled), "api_version": getattr(api, "API_VERSION", None),
-                                "operations": getattr(api, "CAPABILITIES", [])}
+        try:
+            enabled = manager.is_extension_enabled(extension)
+            api = sys.modules.get(module) if enabled else None
+            providers[extension] = {"enabled": bool(enabled), "api_version": getattr(api, "API_VERSION", None),
+                                    "operations": getattr(api, "CAPABILITIES", [])}
+        except Exception as exc:
+            providers[extension] = {"enabled": None, "api_version": None, "operations": [], "error": str(exc)}
     return {
-        **context(adapter.get_stage()),
-        "extension_origin": manager.get_extension_path(extension_id) if extension_id else None,
+        **context(stage),
+        "extension_origin": origin,
+        "discovery_errors": diagnostics,
         "extension_module": str(Path(module_path).resolve()),
         "extension_code_version": __version__,
         "source_revision": os.getenv("ISAAC_MCP_SOURCE_REVISION", "unknown"),
         "provider_capabilities": providers,
         "process_id": os.getpid(),
-        "log_file": carb.tokens.get_tokens_interface().resolve(log_file) if log_file else None,
+        "log_file": log_file,
         "isaac_sim_version": isaac_sim_version,
         "adapter": adapter_name,
         "adapter_generation": adapter_generation,
@@ -867,7 +883,7 @@ def get_capabilities(
     extension_manager=None,
 ) -> Dict[str, Any]:
     """Return a side-effect-free, machine-readable capability snapshot."""
-    runtime = _runtime_info(adapter)
+    runtime = _runtime_info(adapter, extension_manager)
     commands = sorted(registry)
     extensions = _extension_states(extension_manager)
     motion_enabled = extensions["isaacsim.robot_motion.motion_generation"]["enabled"]

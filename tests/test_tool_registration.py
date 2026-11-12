@@ -62,7 +62,7 @@ def test_all_tool_modules_exist():
 def test_all_tool_modules_have_register_tools():
     for filename in EXPECTED_MODULES:
         path = os.path.join(TOOLS_DIR, filename)
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
         func_names = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
         assert "register_tools" in func_names, f"{filename} missing register_tools() function"
@@ -70,7 +70,7 @@ def test_all_tool_modules_have_register_tools():
 
 def test_init_imports_all_modules():
     path = os.path.join(TOOLS_DIR, "__init__.py")
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         content = f.read()
     for module_name in [
         "capabilities",
@@ -95,9 +95,9 @@ def test_init_imports_all_modules():
 
 def test_named_tool_inventory_matches_authoritative_source_inventory():
     names = []
-    for filename in EXPECTED_MODULES + ["graphs.py"]:
+    for filename in EXPECTED_MODULES + ["graphs.py", "mpm.py", "workflow.py"]:
         path = os.path.join(TOOLS_DIR, filename)
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

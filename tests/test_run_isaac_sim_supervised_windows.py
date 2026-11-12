@@ -22,7 +22,7 @@ pytestmark = [
 def _fake_isaac_root(tmp_path: Path, exit_code: int) -> Path:
     root = tmp_path / "fake isaac sim"
     root.mkdir()
-    (root / "VERSION").write_text("6.0.1\n", encoding="ascii")
+    (root / "VERSION").write_text("6.2.0-rc.14\n", encoding="ascii")
     (root / "isaac-sim.bat").write_text(f"@echo off\r\nexit /b {exit_code}\r\n", encoding="ascii")
     return root
 

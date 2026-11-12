@@ -7,12 +7,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import omni.timeline
 from isaac_sim_mcp_extension.handlers import stage_composition
 
 
 class _Adapter:
     def __init__(self, *, playing: bool = False):
         self.playing = playing
+        omni.timeline.get_timeline_interface = lambda: type("Timeline", (), {"is_stopped": lambda _: not self.playing})()
 
     def get_simulation_state(self):
         return {"timeline_state": "playing" if self.playing else "stopped", "playing": self.playing}

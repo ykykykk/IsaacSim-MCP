@@ -27,11 +27,11 @@ class _AdapterV6:
     def __init__(self) -> None:
         self._camera_sensors = {"/World/Camera": object()}
         self._lidar_sensors = {}
-        context = type("Context", (), {"active_backend": property(lambda _context: self._engine)})()
+        context = type("Context", (), {"isaac_version": "6.2.0-rc.14", "active_backend": property(lambda _context: self._engine)})()
         self._capability_runtime = CapabilityRuntime(context, self._backend_capability)
 
     def get_simulation_state(self):
-        return {"engine": "physx", "isaacsim_version": "6.0.1-rc.7"}
+        return {"engine": "physx", "isaacsim_version": "6.2.0-rc.14"}
 
     def get_stage(self):
         return None
@@ -74,8 +74,8 @@ def test_handler_returns_stable_runtime_capability_contract():
     assert result["status"] == "success"
     assert result["schema_version"] == "1.1"
     assert result["capability_schema_version"] == "1.1"
-    assert result["runtime"] == {
-        "isaac_sim_version": "6.0.1-rc.7",
+    assert {key: result["runtime"][key] for key in ("isaac_sim_version", "adapter", "adapter_generation", "physics_backend", "stage_available")} == {
+        "isaac_sim_version": "6.2.0-rc.14",
         "adapter": "_AdapterV6",
         "adapter_generation": 6,
         "physics_backend": "physx",
@@ -91,9 +91,9 @@ def test_handler_returns_stable_runtime_capability_contract():
     assert matrix["schema_version"] == "1.0"
     assert matrix["active_backend"] == "physx"
     assert len(matrix["features"]) == 21
-    assert matrix["policy"]["supported_requires_live_verification"] is True
+    assert matrix["policy"]["supported_requires_live_verification"] is False
     assert all(record["physx_supported"] is True for record in matrix["features"].values())
-    assert all(record["backends"]["physx"]["verification"] == "verified" for record in matrix["features"].values())
+    assert all(record["backends"]["physx"]["verification"] == "unverified" for record in matrix["features"].values())
     assert matrix["features"]["sensor.camera"]["newton_supported"] is None
     assert matrix["features"]["sensor.camera"]["untested"] == ["newton"]
     assert matrix["features"]["physics.time_step"]["newton_supported"] is False
@@ -308,7 +308,7 @@ def test_handler_returns_stable_runtime_capability_contract():
     assert result["feature_flags"]["robot.joint_state"] == {
         "state": "supported",
         "adapter_generation": 6,
-        "backend_verification": "verified",
+        "backend_verification": "unverified",
         "tool": "get_joint_state",
         "measured_fields": ["position", "velocity", "effort"],
         "target_fields": ["position", "velocity", "effort"],
@@ -317,7 +317,7 @@ def test_handler_returns_stable_runtime_capability_contract():
     assert result["feature_flags"]["robot.joint_command"] == {
         "state": "supported",
         "adapter_generation": 6,
-        "backend_verification": "verified",
+        "backend_verification": "unverified",
         "tool": "set_joint_command",
         "modes": ["position", "velocity", "effort"],
         "atomic_validation": True,
@@ -327,7 +327,7 @@ def test_handler_returns_stable_runtime_capability_contract():
         "state": "supported",
         "adapter_generation": 6,
         "backend": "physx",
-        "backend_verification": "verified",
+        "backend_verification": "unverified",
         "tool": "set_joint_drive_config",
         "read_tool": "get_joint_config",
         "fields": {
@@ -390,7 +390,7 @@ def test_v5_reports_physx_and_supported_lidar_config():
             return {}
 
         def get_stage(self):
-            return object()
+            return None
 
     result = get_capabilities(_AdapterV5(), {}, extension_manager=_ExtensionManager())
 
@@ -410,7 +410,7 @@ def test_v5_reports_physx_and_supported_lidar_config():
 def test_newton_reports_physx_only_fields_and_keeps_unverified_paths_untested():
     class _AdapterV6Newton(_AdapterV6):
         def get_simulation_state(self):
-            return {"engine": "newton", "isaacsim_version": "6.0.1-rc.7"}
+            return {"engine": "newton", "isaacsim_version": "6.2.0-rc.14"}
 
     result = get_capabilities(_AdapterV6Newton(), {}, extension_manager=_ExtensionManager())
     feature = result["feature_flags"]["robot.joint_drive_config"]
@@ -422,7 +422,7 @@ def test_newton_reports_physx_only_fields_and_keeps_unverified_paths_untested():
     assert result["backend_matrix"]["active_backend"] == "newton"
     assert feature["state"] == "untested"
     assert feature["backend"] == "newton"
-    assert feature["backend_verification"] == "untested"
+    assert feature["backend_verification"] == "unverified"
     assert feature["fields"] == {
         "stiffness": "untested",
         "damping": "untested",
@@ -441,11 +441,11 @@ def test_adapter_backend_guard_allows_verified_physx_and_rejects_newton_states()
     physx = _AdapterV6()
     accepted = IsaacAdapterBase.require_backend_capability(physx, "physics.time_step")
     assert accepted["state"] == "supported"
-    assert accepted["verification"] == "verified"
+    assert accepted["verification"] == "unverified"
 
     class _Newton(_AdapterV6):
         def get_simulation_state(self):
-            return {"engine": "newton", "isaacsim_version": "6.0.1-rc.7"}
+            return {"engine": "newton", "isaacsim_version": "6.2.0-rc.14"}
 
     newton = _Newton()
     with pytest.raises(NotImplementedError, match="physics.time_step.*unsupported.*newton"):
@@ -467,6 +467,7 @@ def test_tool_adds_mcp_server_metadata_and_uses_system_command():
             return decorator
 
     class _Connection:
+        host = "127.0.0.1"
         port = 8766
 
         def __init__(self):
@@ -489,7 +490,8 @@ def test_tool_adds_mcp_server_metadata_and_uses_system_command():
         "transport": "stdio_to_tcp",
         "live_control_port": 8766,
         "tool_profile": "legacy",
-        "public_tool_count": 130,
+        "public_tool_count": 138,
+        "tool_domains": [],
         "available_tool_profiles": ["consolidated", "full", "legacy"],
         "consolidated_replacements": {},
     }

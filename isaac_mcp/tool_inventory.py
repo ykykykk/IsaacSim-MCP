@@ -14,7 +14,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from isaac_mcp.tool_profiles import resolve_tool_profile, select_tool_names, select_domain_names
+from isaac_mcp.tool_profiles import resolve_tool_profile, select_domain_names, select_tool_names
 
 TOOLS_ROOT = Path(__file__).resolve().parent / "tools"
 MCP_LOCAL_TOOL_NAMES = frozenset({"get_runtime_status"})

@@ -25,7 +25,7 @@ def _write_batch(path: Path, lines: list[str]) -> None:
 def _fake_isaac_root(tmp_path: Path) -> tuple[Path, Path]:
     root = tmp_path / "fake isaac sim"
     root.mkdir()
-    (root / "VERSION").write_text("6.0.1\n", encoding="ascii")
+    (root / "VERSION").write_text("6.2.0-rc.14\n", encoding="ascii")
     capture = tmp_path / "isaac-argv.txt"
     _write_batch(
         root / "isaac-sim.bat",
@@ -170,7 +170,7 @@ def test_ambiguous_display_gpu_falls_back_to_zero_with_warning(tmp_path: Path, g
     assert result.returncode == 0, result.stderr
     assert _physics_arguments(capture) == ["--/physics/cudaDevice=0"]
     output = f"{result.stdout}\n{result.stderr}".upper()
-    assert "WARNING" in output
+    assert "WARNING" in output or "警告" in output
     assert "GPU 0" in output
 
 
@@ -184,7 +184,7 @@ def test_gpu_probe_failure_falls_back_to_zero_and_uses_expected_query(tmp_path: 
     assert result.returncode == 0, result.stderr
     assert _physics_arguments(capture) == ["--/physics/cudaDevice=0"]
     output = f"{result.stdout}\n{result.stderr}".upper()
-    assert "WARNING" in output and "GPU 0" in output
+    assert ("WARNING" in output or "警告" in output) and "GPU 0" in output
     probe_arguments = probe_capture.read_text(encoding="utf-8")
     assert "--query-gpu=index,display_active" in probe_arguments
     assert "--format=csv,noheader,nounits" in probe_arguments
@@ -213,7 +213,7 @@ def test_minus_one_is_preserved_with_stop_crash_warning(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert _physics_arguments(capture) == ["--/physics/cudaDevice=-1"]
     output = f"{result.stdout}\n{result.stderr}"
-    assert "WARNING" in output.upper()
+    assert "WARNING" in output.upper() or "警告" in output
     assert "PhysXGpu_64.dll" in output
     assert "Stop" in output
 

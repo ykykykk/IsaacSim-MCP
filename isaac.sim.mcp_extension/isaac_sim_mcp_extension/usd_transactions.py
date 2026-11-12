@@ -6,7 +6,7 @@ import uuid
 from collections import OrderedDict
 from pathlib import Path
 
-from .workflow_context import context, require_context, register_reset
+from .workflow_context import context, register_reset, require_context
 
 MAX_BYTES = 128 * 1024 * 1024
 TTL_SECONDS = 600

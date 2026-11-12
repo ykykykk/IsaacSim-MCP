@@ -4,6 +4,7 @@ from isaac_sim_mcp_extension.adapters.v6_runtime.capabilities import CapabilityR
 
 
 class _Context:
+    isaac_version = "6.2.0-rc.14"
     active_backend = "physx"
 
 
@@ -25,7 +26,8 @@ def test_capability_runtime_preserves_schema_policy_and_feature_set() -> None:
 
     assert matrix["schema_version"] == "1.0"
     assert matrix["policy"] == {
-        "supported_requires_live_verification": True,
+        "supported_requires_live_verification": False,
+        "supported_means": "implemented; consult version-scoped verification separately",
         "null_supported_means": "untested",
         "false_supported_means": "unsupported",
     }
@@ -64,3 +66,11 @@ def test_v6_facade_forwards_capability_matrix() -> None:
     )()
 
     assert adapter.get_backend_capability_matrix() is expected
+
+
+def test_historical_evidence_does_not_verify_current_runtime():
+    record = _runtime(_Context()).get_backend_capability_matrix()["features"]["physics.time_step"]["backends"]["physx"]
+    assert record["implementation"] == "implemented"
+    assert record["verification"] == "unverified"
+    assert record["evidence_version"] == "6.0.1"
+    assert record["runtime_version"] == "6.2.0-rc.14"

@@ -2,7 +2,7 @@
 
 > 当前代码版本 **0.7.0**：多层 USD 事务、MPM 构建任务、定向保存与领域工具集。
 > [工作流与安装指南](docs/WORKFLOW_6_2.md) · [设计方案](docs/development/ISAAC_6_2_WORKFLOW_PLAN.md)
-> 此轮未运行测试或仿真；前版空宿主只读检查不覆盖新增写入和构建逻辑。
+> 2026-11-12：MCP 定向离线与 6.2 宿主工作流验收通过，[范围与结果](docs/development/WORKFLOW_6_2_VALIDATION.md)。外部插件及其他工具未据此声明通过。
 
 IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控制 NVIDIA Isaac Sim。涵蓋 USD 場景、機器人、感測器、物理、Action Graph、ROS 2、Replicator SDG、動畫人物、NVIDIA 資產與模擬控制。
 

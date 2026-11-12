@@ -4,7 +4,7 @@ import time
 from collections import OrderedDict
 
 from .. import usd_transactions
-from ..workflow_context import context, require_context, register_reset
+from ..workflow_context import context, register_reset, require_context
 
 _plans = OrderedDict()
 register_reset("source_plans", _plans.clear)
@@ -47,7 +47,7 @@ def _call(adapter, action, **params):
             while len(_plans) >= 16:
                 _plans.popitem(last=False)
             _plans[plan["plan_id"]] = (context(stage), time.monotonic() + 600)
-            return {"status": "success", "preview": True, "applied": False, "context": context(stage), "data": plan}
+            return {"status": "success", "preview": True, "applied": False, "data": {**plan, "context": context(stage)}}
         token = params["plan_id"]
         item = _plans.get(token)
         if item is None or item[1] < time.monotonic():

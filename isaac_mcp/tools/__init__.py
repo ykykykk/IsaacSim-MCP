@@ -40,7 +40,7 @@ from pydantic import Field
 from isaac_mcp.command_context import command_id_var, idempotency_key_var
 from isaac_mcp.responses import NativeImageResponse, normalize_response
 from isaac_mcp.runtime_status import IsaacRuntimeUnavailableError
-from isaac_mcp.tool_profiles import ADDED_CONSOLIDATED_TOOLS, REPLACED_LEGACY_TOOLS, resolve_tool_profile
+from isaac_mcp.tool_profiles import resolve_tool_profile
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -68,7 +68,6 @@ def register_all_tools(mcp: FastMCP, get_connection: Callable[[], IsaacConnectio
         materials,
         motion,
         mpm,
-        workflow,
         objects,
         physics,
         replicator,
@@ -77,6 +76,7 @@ def register_all_tools(mcp: FastMCP, get_connection: Callable[[], IsaacConnectio
         scene,
         sensors,
         simulation,
+        workflow,
     )
 
     schema_mcp = _ResponseSchemaMCP(mcp)

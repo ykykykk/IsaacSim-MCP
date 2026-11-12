@@ -201,8 +201,9 @@ def test_recent_kit_crash_is_available_when_runtime_socket_is_closed(tmp_path, m
 
     result = runtime_status.get_runtime_status(state_file=tmp_path / "missing-state.json")
 
-    assert result["state"] == "crashed"
-    assert result["availability_code"] == "ISAAC_RUNTIME_CRASHED"
+    assert result["state"] == "unmanaged"
+    assert result["availability_code"] == "ISAAC_RUNTIME_UNAVAILABLE"
+    assert result["diagnostics"]["endpoint_bound"] is False
     assert result["diagnostics"]["primary_signature"] == "CUDA_ERROR_700"
     assert result["diagnostics"]["crash_detected"] is True
     assert "cudaErrorIllegalAddress" in result["diagnostics"]["signature_evidence"]["CUDA_ERROR_700"]

@@ -5,17 +5,17 @@
 
 from __future__ import annotations
 
-import math
 import json
-import time
-from collections import OrderedDict
+import math
 import os
+import time
 import uuid
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
-from ..adapters.base import IsaacAdapterBase
 from .. import usd_transactions as transactions
+from ..adapters.base import IsaacAdapterBase
 from ..workflow_context import context, register_reset
 
 TYPE_NAMES = {
@@ -914,10 +914,8 @@ def apply_stage_batch(
         token = _remember_plan(snapshot, normalized)
         return {
             "status": "success",
-            "plan_id": token,
-            "context": snapshot["context"],
             "message": "Batch preview validated",
-            "data": {"preview": True, "operations": previews},
+            "data": {"preview": True, "operations": previews, "plan_id": token, "context": snapshot["context"]},
             "readback": get_stage_composition(adapter, root_path=readback_root_path).get("data"),
         }
     stage = adapter.get_stage()
