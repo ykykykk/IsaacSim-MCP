@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
+from pathlib import Path
 
 from isaac_mcp.connection import IsaacConnection
 from isaac_mcp.tool_inventory import extension_tool_count
+from scripts.live_camera_evidence import call_tool, capture
 
 ROOT = "/World/MCP_Task_4_4"
 HUMAN_ROOT = f"{ROOT}/Characters"
@@ -78,6 +81,11 @@ def main() -> int:
     human_path = None
     original_paths: list[str] = []
     try:
+        root = Path(os.environ["ISAAC_MCP_VALIDATION_ROOT"]).resolve(strict=True)
+        runtime = _data(connection.send_command("system.get_capabilities"))["runtime"]
+        assert runtime["isaac_sim_version"].startswith("6.2.")
+        assert Path(runtime["log_file"]).parent == root
+        assert Path(runtime["root_identifier"]).parent == root
         _data(connection.send_command("simulation.stop"))
         state_before = _data(connection.send_command("simulation.get_state"))
         assert state_before["timeline_state"] == "stopped", state_before
@@ -90,6 +98,15 @@ def main() -> int:
         if connection.send_command("scene.get_prim_info", {"prim_path": ROOT})["status"] == "success":
             _data(connection.send_command("objects.delete", {"prim_path": ROOT}))
         _fixture(connection)
+        _data(connection.send_command('lighting.create', {'prim_path': ROOT + '/Light', 'intensity': 3000}))
+        _data(connection.send_command('sensors.create_camera', {
+            'prim_path': ROOT + '/Camera', 'position': [55, 6, 4], 'resolution': [960, 640]}))
+        _data(connection.send_command('simulation.execute_script', {'code': f'''
+import omni.usd
+from pxr import Gf, UsdGeom
+camera = UsdGeom.Xformable(omni.usd.get_context().get_stage().GetPrimAtPath('{ROOT}/Camera'))
+camera.MakeMatrixXform().Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(55,6,4), Gf.Vec3d(51,0,1), Gf.Vec3d(0,0,1)).GetInverse())
+'''}))
 
         status_before = _data(connection.send_command("humans.navmesh_status"))
         assert VOLUME in status_before["volume_paths"]
@@ -124,6 +141,8 @@ def main() -> int:
                     "behavior": "manual",
                     "position": ORIGIN,
                     "seed": 4401,
+                    "asset_path": os.environ['ISAAC_MCP_TEST_CHARACTER_DIR'],
+                    "motion_library_path": os.environ['ISAAC_MCP_TEST_MOTION_LIBRARY'],
                 },
             )
         )
@@ -147,9 +166,10 @@ def main() -> int:
         assert stopped_rejection["status"] == "error" and stopped_rejection["code"] == "TIMELINE_STATE_CONFLICT"
 
         _data(connection.send_command("simulation.play"))
-        initialized = _wait_agent(connection, human_path)
+        _wait_agent(connection, human_path)
         time.sleep(1.0)
-        position_before = initialized["runtime"]["position"]
+        position_before = _human(connection, human_path)["runtime"]["position"]
+        capture(ROOT + '/Camera', root / 'human-before.png')
         behavior_response = connection.send_command(
             "humans.set_behavior",
             {
@@ -177,6 +197,7 @@ def main() -> int:
                 break
             time.sleep(0.1)
         assert moved and _distance(moved["runtime"]["position"], position_before) >= 0.25, moved
+        capture(ROOT + '/Camera', root / 'human-after.png')
 
         looked = _data(
             connection.send_command(
@@ -187,6 +208,10 @@ def main() -> int:
         assert looked["task"]["task_name"] == "LookAt", looked
         idled = _data(connection.send_command("humans.idle", {"human_path": human_path, "preview": False}))
         assert idled["task"]["task_name"] == "Idle", idled
+        query = call_tool('query_human', {'action': 'get', 'human_path': human_path})
+        assert query['data']['human']['mcp_owned'] is True
+        action = call_tool('set_human_action', {'action': 'idle', 'human_path': human_path, 'preview': False})
+        assert action['data']['task']['task_name'] == 'Idle'
         _data(connection.send_command("simulation.stop"))
 
         delete_preview = _data(connection.send_command("humans.delete", {"human_path": human_path, "preview": True}))
@@ -209,6 +234,8 @@ def main() -> int:
             "stopped_task_rejection": stopped_rejection["code"],
             "move": {
                 "task": moved_task["task"],
+                "position_before": position_before,
+                "position_after": moved['runtime']['position'],
                 "distance_observed": _distance(moved["runtime"]["position"], position_before),
             },
             "look_task": looked["task"],

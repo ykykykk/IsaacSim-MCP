@@ -1,0 +1,1756 @@
+{
+  "date": "2026-11-12",
+  "baseline": "cb53025",
+  "runtime": "Isaac Sim 6.2.0-rc.14 / PhysX / Windows",
+  "scope": "MCP only; temporary providers explicitly authorized in isolated scratch host; no external service calls; no push",
+  "previous_evidence": [
+    "FULL_MCP_6_2_RESULTS.json",
+    "MCP_6_2_RECHECK_RESULTS.json"
+  ],
+  "legacy_count": 138,
+  "full_count": 160,
+  "legacy_summary": {
+    "mcp_tool_verified": 77,
+    "live_command_verified": 59,
+    "excluded_by_user": 2
+  },
+  "all_profile_summary": {
+    "mcp_tool_verified": 99,
+    "live_command_verified": 59,
+    "excluded_by_user": 2
+  },
+  "offline": {
+    "passed": 706,
+    "failed": 0,
+    "deselected": 53,
+    "log": "offline-final.log",
+    "junit": "offline-final.xml"
+  },
+  "lint": "passed",
+  "raw_evidence": "test_outputs/mcp-complete-20261112-141643",
+  "fresh_host_domains": [
+    {
+      "domain": "ros2_workflows",
+      "exit_code": 0,
+      "elapsed": 2.59
+    },
+    {
+      "domain": "ros2_publishers",
+      "exit_code": 0,
+      "elapsed": 24.18
+    },
+    {
+      "domain": "human_lifecycle",
+      "exit_code": 0,
+      "elapsed": 21.24
+    },
+    {
+      "domain": "provider_bridges",
+      "exit_code": 0,
+      "elapsed": 9.96
+    },
+    {
+      "domain": "sensor_lifecycle",
+      "exit_code": 0,
+      "elapsed": 13.28
+    }
+  ],
+  "cumulative_unique_live_domains": 32,
+  "final_host_log_errors": 0,
+  "warnings_not_suppressed": true,
+  "external_plugins": {
+    "mpm": {
+      "git_status_unchanged": true,
+      "source_modified": false
+    },
+    "save": {
+      "git_status_unchanged": true,
+      "source_modified": false
+    }
+  },
+  "cleanup": "isolated stage empty, MPM runtime absent, ROS render products absent; process exited 0; 19876/19977 closed",
+  "ros_replay_messages": {
+    "joints": {
+      "count": 121,
+      "last": {
+        "names": [
+          "panda_joint1",
+          "panda_joint2",
+          "panda_joint3",
+          "panda_joint4",
+          "panda_joint5",
+          "panda_joint6",
+          "panda_joint7",
+          "panda_finger_joint1",
+          "panda_finger_joint2"
+        ],
+        "positions": [
+          0.012,
+          -0.5685,
+          0.0,
+          -2.8047,
+          0.0,
+          3.0345,
+          0.741,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "tf": {
+      "count": 121,
+      "last": [
+        {
+          "child": "RosTarget",
+          "parent": "world",
+          "translation": [
+            3.0,
+            0.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    "rgb": {
+      "count": 14,
+      "last": {
+        "width": 320,
+        "height": 240,
+        "encoding": "rgb8",
+        "bytes": 230400,
+        "unique_bytes": 241
+      }
+    },
+    "points": {
+      "count": 5,
+      "last": {
+        "width": 806,
+        "height": 1,
+        "point_step": 12,
+        "bytes": 9672,
+        "fields": [
+          "x",
+          "y",
+          "z"
+        ]
+      }
+    }
+  },
+  "tested_source_sha256": {
+    "isaac.sim.mcp_extension/isaac_sim_mcp_extension/handlers/humans.py": "42fb7a6f5fc81561578f86effa76e5b8efaa6a8b4aab37ad526db2d6992e7c61",
+    "isaac.sim.mcp_extension/isaac_sim_mcp_extension/handlers/mpm.py": "6189cc282552d4c052030c08bc62fd5e8d93ae66a5a79647af260b1905a3b995",
+    "isaac.sim.mcp_extension/isaac_sim_mcp_extension/handlers/ros2.py": "93caa0f06829cd754e281520f4e707bbd59a222ee3ecf8056d95d468993d5839",
+    "scripts/verify_human_lifecycle_live.py": "a31d191c0ed19bb7d74370ac0b6d795d85f340dbb5adf0c3adc277b9b725919d",
+    "scripts/verify_ros2_workflows_live.py": "bdd3f7dbfe3b088794ee66dc3dd3555770f2f5340e7339c4187fd4cf0ab16933",
+    "tests/test_handler_humans.py": "cd36e622e23a57f0785e225eeb7defec8718ec07f1f1ed4bc146a6cdb2f90ed2",
+    "tests/test_ros2_workflows.py": "9ca210de9eb357deb125f8ab7497f5cd74771b4e6ebb23a8f2aa36d28815cb5a",
+    "scripts/live_camera_evidence.py": "5db4439380a5f326121d250c22f207b87ab404c1040d037b5b6c15630b7b7410",
+    "scripts/verify_provider_bridges_live.py": "0a5c19227f5d09a0ad5635e2358f4cbf791ff974d5257a5e3750ee59f60f3185",
+    "scripts/verify_ros2_publishers_live.py": "586ebb22f7e6bb1e1215718759a2c4b7f9e4583387388c4267c308fb77d5ad8e",
+    "tests/test_mpm_provider_bridge.py": "54b072321bd0f0e64633dff7eadeba8ff50ec3b37290e3cdefb66ceb3b2f9ddf"
+  },
+  "tools": [
+    {
+      "tool": "action_graph_connection",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "apply_material",
+      "module": "materials",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "apply_stage_batch",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition",
+        "workflow_6_2"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "bake_navmesh",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "cancel_job",
+      "module": "jobs",
+      "status": "live_command_verified",
+      "evidence": [
+        "job_diagnostics"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "cancel_motion",
+      "module": "motion",
+      "status": "live_command_verified",
+      "evidence": [
+        "motion_control"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "cancel_sdg_job",
+      "module": "replicator",
+      "status": "live_command_verified",
+      "evidence": [
+        "replicator_sdg"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "capture_camera_output",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "camera_outputs",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "capture_image",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_rgb",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": [
+        "INLINE_SIZE_LIMIT_EXCEEDED"
+      ]
+    },
+    {
+      "tool": "cleanup_artifacts",
+      "module": "artifacts",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "clear_scene",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "core_surface",
+        "profiles",
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "clone_object",
+      "module": "objects",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "close_gripper",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "collision_group",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "commit_source_changes",
+      "module": "workflow",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "INVALID_WORKFLOW_REQUEST"
+      ]
+    },
+    {
+      "tool": "compute_ik",
+      "module": "motion",
+      "status": "live_command_verified",
+      "evidence": [
+        "motion_control"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "configure_physics_body",
+      "module": "physics",
+      "status": "live_command_verified",
+      "evidence": [
+        "physics_authoring",
+        "physics_material"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "configure_script_node",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "connect_action_graph",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "control_gripper",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "control_mobile_base_velocity",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": [],
+      "limitation": "Jetbot standalone only; mixed Panda/Jetbot/Kaya GPU fixture hit PhysX CUDA 700 on three attempts; not accepted"
+    },
+    {
+      "tool": "control_timeline",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_action_graph",
+      "module": "graphs",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface",
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_camera",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "artifact_transport",
+        "camera_outputs",
+        "camera_rgb",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_visual",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_collision_group",
+      "module": "physics",
+      "status": "live_command_verified",
+      "evidence": [
+        "physics_authoring"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_lidar",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "lidar_config",
+        "lidar_point_cloud",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": [
+        "LIDAR_HORIZONTAL_RESOLUTION_NOT_DIVISIBLE"
+      ]
+    },
+    {
+      "tool": "create_light",
+      "module": "lighting",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_outputs",
+        "core_surface",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_visual",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_material",
+      "module": "materials",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_object",
+      "module": "objects",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_outputs",
+        "core_surface",
+        "lidar_config",
+        "lidar_point_cloud",
+        "native_image_content",
+        "native_image_content_http",
+        "profiles",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_physics_joint",
+      "module": "physics",
+      "status": "live_command_verified",
+      "evidence": [
+        "physics_authoring"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_physics_scene",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "core_surface",
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_robot",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "robot_joint_control",
+        "robot_joint_drive_config"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "create_ros2_camera_publisher",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "create_ros2_clock_publisher",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_workflows"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "create_ros2_joint_state_publisher",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "create_ros2_lidar_publisher",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "create_ros2_publisher",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": [
+        "ROS2_PREREQUISITE_MISSING"
+      ]
+    },
+    {
+      "tool": "create_ros2_tf_publisher",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "create_sdg_job",
+      "module": "replicator",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "delete_action_graph",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "delete_artifact",
+      "module": "artifacts",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "delete_human",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "delete_object",
+      "module": "objects",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_outputs",
+        "lidar_config",
+        "lidar_point_cloud",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "delete_ros2_workflow",
+      "module": "ros2",
+      "status": "live_command_verified",
+      "evidence": [
+        "ros2_publishers"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "delete_sdg_job",
+      "module": "replicator",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "delete_sensor",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_visual",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "disconnect_action_graph",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "edit_action_graph",
+      "module": "graphs",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "edit_composition_arc",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "edit_sublayer",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "evaluate_action_graph",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "execute_script",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "camera_outputs",
+        "camera_rgb",
+        "profiles",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "execute_trajectory",
+      "module": "motion",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "generate_3d",
+      "module": "assets",
+      "status": "excluded_by_user",
+      "evidence": [],
+      "previous_negative_codes": [
+        "COMMAND_FAILED"
+      ],
+      "reason": "User explicitly prohibited external-service calls; success path not accepted"
+    },
+    {
+      "tool": "get_action_graph",
+      "module": "graphs",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_action_graph_status",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_artifact_info",
+      "module": "artifacts",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport"
+      ],
+      "negative_codes": [
+        "ARTIFACT_EXPIRED",
+        "ARTIFACT_NOT_FOUND",
+        "INVALID_ARTIFACT_HANDLE"
+      ]
+    },
+    {
+      "tool": "get_camera_calibration",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "camera_outputs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_capabilities",
+      "module": "capabilities",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs",
+        "artifact_transport",
+        "camera_outputs",
+        "camera_rgb",
+        "core_surface",
+        "lidar_config",
+        "lidar_point_cloud",
+        "profiles",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "robot_visual",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_collision_group",
+      "module": "physics",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_human",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "get_isaac_logs",
+      "module": "simulation",
+      "status": "live_command_verified",
+      "evidence": [
+        "job_diagnostics",
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_job_status",
+      "module": "jobs",
+      "status": "live_command_verified",
+      "evidence": [
+        "job_diagnostics"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_joint_config",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_joint_drive_config"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_joint_positions",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_joint_state",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_joint_control"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_lidar_config",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "lidar_config"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_lidar_point_cloud",
+      "module": "sensors",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "lidar_config",
+        "lidar_point_cloud",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": [
+        "LIDAR_FRAME_NOT_READY"
+      ]
+    },
+    {
+      "tool": "get_material",
+      "module": "materials",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_material_binding",
+      "module": "materials",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_motion_status",
+      "module": "motion",
+      "status": "live_command_verified",
+      "evidence": [
+        "motion_control"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_mpm_config",
+      "module": "mpm",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "MPM_EXTENSION_DISABLED"
+      ]
+    },
+    {
+      "tool": "get_mpm_status",
+      "module": "mpm",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "MPM_EXTENSION_DISABLED"
+      ]
+    },
+    {
+      "tool": "get_navmesh_status",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": [
+        "NAVMESH_STATUS_FAILED"
+      ]
+    },
+    {
+      "tool": "get_physics_body",
+      "module": "physics",
+      "status": "live_command_verified",
+      "evidence": [
+        "physics_authoring"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_physics_joint",
+      "module": "physics",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_physics_params",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_physics_state",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_prim_info",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_rgb",
+        "core_surface",
+        "lidar_config",
+        "lidar_point_cloud",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": [
+        "COMMAND_FAILED"
+      ]
+    },
+    {
+      "tool": "get_replicator_status",
+      "module": "replicator",
+      "status": "live_command_verified",
+      "evidence": [
+        "replicator_sdg"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_robot_info",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_joint_control",
+        "robot_joint_drive_config"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_ros2_status",
+      "module": "ros2",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_runtime_status",
+      "module": "capabilities",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_scene_info",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "backend_capability_matrix",
+        "command_governance",
+        "job_diagnostics",
+        "omnigraph_lifecycle",
+        "replicator_sdg",
+        "stage_composition"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_script_audit_log",
+      "module": "simulation",
+      "status": "live_command_verified",
+      "evidence": [
+        "command_governance"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_script_policy",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_sdg_job_status",
+      "module": "replicator",
+      "status": "live_command_verified",
+      "evidence": [
+        "replicator_sdg"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_sdg_manifest",
+      "module": "replicator",
+      "status": "live_command_verified",
+      "evidence": [
+        "replicator_sdg"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_semantic_labels",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_simulation_state",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_stage_composition",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "get_typed_attribute",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "import_urdf",
+      "module": "assets",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "job_control",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "light_config",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_action_graphs",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_available_robots",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_controller_profiles",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_environments",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_humans",
+      "module": "humans",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_jobs",
+      "module": "jobs",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_mpm_configs",
+      "module": "mpm",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "MPM_EXTENSION_DISABLED"
+      ]
+    },
+    {
+      "tool": "list_nvidia_assets",
+      "module": "assets",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_prims",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "list_ros2_workflows",
+      "module": "ros2",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "load_environment",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "load_usd",
+      "module": "assets",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": [
+        "COMMAND_FAILED"
+      ]
+    },
+    {
+      "tool": "material_binding",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "material_definition",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "modify_light",
+      "module": "lighting",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "motion_job",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "new_stage",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition",
+        "workflow_6_2"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "open_gripper",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "open_stage",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition",
+        "workflow_6_2"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "pause_simulation",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "physics_body_config",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "physics_joint",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "plan_joint_trajectory",
+      "module": "motion",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "play_simulation",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_outputs",
+        "camera_rgb",
+        "lidar_config",
+        "lidar_point_cloud",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "preview_source_commit",
+      "module": "workflow",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "INVALID_WORKFLOW_REQUEST"
+      ]
+    },
+    {
+      "tool": "query_action_graph",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "query_human",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "query_prim",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "read_artifact",
+      "module": "artifacts",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport"
+      ],
+      "negative_codes": [
+        "ARTIFACT_CHUNK_LIMIT_EXCEEDED"
+      ]
+    },
+    {
+      "tool": "refresh_robot_library",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "reload_script",
+      "module": "simulation",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "reload_script_node",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "request_mpm_rebuild",
+      "module": "mpm",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "MPM_EXTENSION_DISABLED"
+      ]
+    },
+    {
+      "tool": "robot_library",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "save_stage_as",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition",
+        "workflow_6_2"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "script_node_source",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "sdg_job_control",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "search_usd",
+      "module": "assets",
+      "status": "excluded_by_user",
+      "evidence": [],
+      "previous_negative_codes": [
+        "COMMAND_FAILED"
+      ],
+      "reason": "User explicitly prohibited external-service calls; success path not accepted"
+    },
+    {
+      "tool": "semantic_labels",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_action_graph_enabled",
+      "module": "graphs",
+      "status": "live_command_verified",
+      "evidence": [
+        "omnigraph_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_gripper_width",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_human_action",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "set_human_behavior",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "set_human_idle",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "set_human_look_at",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "set_human_target",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "set_joint_command",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_joint_control"
+      ],
+      "negative_codes": [
+        "JOINT_NOT_FOUND"
+      ]
+    },
+    {
+      "tool": "set_joint_drive_config",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_joint_drive_config"
+      ],
+      "negative_codes": [
+        "INVALID_JOINT_DRIVE_VALUE",
+        "JOINT_DRIVE_TIMELINE_ACTIVE",
+        "JOINT_NOT_FOUND"
+      ]
+    },
+    {
+      "tool": "set_joint_positions",
+      "module": "robots",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_mobile_base_velocity",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": [],
+      "limitation": "Jetbot standalone only; mixed Panda/Jetbot/Kaya GPU fixture hit PhysX CUDA 700 on three attempts; not accepted"
+    },
+    {
+      "tool": "set_physics_params",
+      "module": "simulation",
+      "status": "live_command_verified",
+      "evidence": [
+        "physics_params"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_semantic_labels",
+      "module": "scene",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "core_surface"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_typed_attribute",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "set_variant_selection",
+      "module": "scene",
+      "status": "live_command_verified",
+      "evidence": [
+        "stage_composition"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "spawn_human",
+      "module": "humans",
+      "status": "live_command_verified",
+      "evidence": [
+        "human_lifecycle"
+      ],
+      "previous_negative_codes": []
+    },
+    {
+      "tool": "spawn_nvidia_asset",
+      "module": "assets",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "start_job",
+      "module": "jobs",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "alias_jobs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "start_sdg_job",
+      "module": "replicator",
+      "status": "live_command_verified",
+      "evidence": [
+        "job_diagnostics",
+        "replicator_sdg"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "step_simulation",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "robot_visual"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "stop_mobile_base",
+      "module": "controllers",
+      "status": "live_command_verified",
+      "evidence": [
+        "controller_singletons"
+      ],
+      "negative_codes": [],
+      "limitation": "Jetbot standalone only; mixed Panda/Jetbot/Kaya GPU fixture hit PhysX CUDA 700 on three attempts; not accepted"
+    },
+    {
+      "tool": "stop_simulation",
+      "module": "simulation",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "artifact_transport",
+        "camera_outputs",
+        "camera_rgb",
+        "lidar_config",
+        "lidar_point_cloud",
+        "native_image_content",
+        "native_image_content_http",
+        "robot_joint_control",
+        "robot_joint_drive_config",
+        "robot_visual",
+        "sensor_lifecycle"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "transform_object",
+      "module": "objects",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "camera_outputs"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "typed_attribute",
+      "module": "consolidated",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "profiles"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "undo_stage_transaction",
+      "module": "workflow",
+      "status": "live_command_verified",
+      "evidence": [
+        "workflow_6_2"
+      ],
+      "negative_codes": []
+    },
+    {
+      "tool": "update_mpm_config",
+      "module": "mpm",
+      "status": "mcp_tool_verified",
+      "evidence": [
+        "provider_bridges"
+      ],
+      "previous_negative_codes": [
+        "MPM_EXTENSION_DISABLED"
+      ]
+    }
+  ]
+}

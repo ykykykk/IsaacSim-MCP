@@ -1,5 +1,8 @@
 # MCP 6.2 修复后复测
 
+> 本页为上一轮记录。最新完整范围验收见 [MCP_6_2_ACCEPTANCE.md](MCP_6_2_ACCEPTANCE.md)：
+> 人物、ROS 2、MPM / 保存桥接已补齐；仅保留用户明确排除的 USD Search / Beaver3D 未验收。
+
 日期：2026-11-12。修复基线：`0a34263`。本记录接续并更新初轮 `FULL_MCP_6_2_VALIDATION.md` 的结论。
 
 ## 结果

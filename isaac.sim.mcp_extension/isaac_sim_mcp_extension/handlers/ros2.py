@@ -13,6 +13,7 @@ import re
 from typing import Any, Dict, List, Optional, Sequence
 
 from ..adapters.base import IsaacAdapterBase
+from ..workflow_context import register_reset
 from . import graphs
 
 SCHEMA_VERSION = "1.0"
@@ -40,6 +41,15 @@ CAMERA_TYPES = {
 LIDAR_TYPES = {"laser_scan", "point_cloud"}
 _ROS_NAME_RE = re.compile(r"^/?(?:[A-Za-z_][A-Za-z0-9_]*)(?:/[A-Za-z_][A-Za-z0-9_]*)*$")
 _FRAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_/]*$")
+_OWNED_RENDER_PRODUCTS: Dict[str, Any] = {}
+
+
+def _clear_render_products():
+    for path in list(_OWNED_RENDER_PRODUCTS):
+        _OWNED_RENDER_PRODUCTS.pop(path).destroy()
+
+
+register_reset('ros2_render_products', _clear_render_products)
 
 
 def register(registry: Dict[str, Any], adapter: IsaacAdapterBase) -> None:
@@ -601,7 +611,8 @@ def _create_sensor_publisher(
         return frame_error
     if not str(sensor_prim_path).startswith("/") or not _valid_prim(sensor_prim_path):
         return _error("ROS2_SENSOR_PRIM_NOT_FOUND", f"Sensor prim not found: {sensor_prim_path}")
-    if render_product_path is None:
+    own_render_product = render_product_path is None
+    if own_render_product:
         cache_name = "_camera_sensors" if workflow_type == "camera" else "_lidar_sensors"
         sensor = (getattr(adapter, cache_name, None) or {}).get(sensor_prim_path)
         if sensor is None:
@@ -620,9 +631,10 @@ def _create_sensor_publisher(
     if sensor_type not in allowed:
         return _error("INVALID_ROS2_SENSOR_TYPE", f"{type_key} must be one of: {', '.join(sorted(allowed))}")
     return _run_or_return(
-        _create_workflow(
+        _create_sensor_workflow(
             adapter,
             workflow_type,
+            own_render_product=own_render_product,
             graph_path=graph_path,
             topic_name=topic_name,
             render_product_path=render_product_path,
@@ -636,6 +648,42 @@ def _create_sensor_publisher(
             **{type_key: sensor_type},
         )
     )
+
+
+def _copy_render_product(source_path: str, graph_path: str):
+    """Keep ROS publication independent of the MCP sensor's Stop cleanup."""
+    import omni.replicator.core as rep
+    import omni.usd
+    from pxr import UsdRender
+
+    source = UsdRender.Product(omni.usd.get_context().get_stage().GetPrimAtPath(source_path))
+    camera = source.GetCameraRel().GetTargets()
+    if len(camera) != 1:
+        raise ValueError(f'Render product must target exactly one sensor: {source_path}')
+    return rep.create.render_product(str(camera[0]), tuple(source.GetResolutionAttr().Get()),
+        force_new=True, name='MCP_ROS_' + graph_path.rsplit('/', 1)[-1])
+
+
+async def _create_sensor_workflow(adapter, workflow_type, *, own_render_product, **params):
+    if params['preview'] or not own_render_product:
+        return await _create_workflow(adapter, workflow_type, **params)
+    plan = await _create_workflow(adapter, workflow_type, **{**params, 'preview': True})
+    if plan['status'] != 'success':
+        return plan
+    product = None
+    try:
+        product = _copy_render_product(params['render_product_path'], params['graph_path'])
+        result = await _create_workflow(adapter, workflow_type, **{**params, 'render_product_path': product.path})
+        if result['status'] == 'success':
+            _OWNED_RENDER_PRODUCTS[params['graph_path']] = product
+            result['readback']['owned_render_product'] = product.path
+        else:
+            product.destroy()
+        return result
+    except Exception:
+        if product is not None:
+            product.destroy()
+        raise
 
 
 def create_camera_publisher(
@@ -733,6 +781,9 @@ async def _delete_ros2_workflow(
             "ROS 2 workflow deletion preview validated",
             {"preview": True, "graph_path": graph_path, "ownership": marker},
         )
+    product = _OWNED_RENDER_PRODUCTS.pop(graph_path, None)
+    if product is not None:
+        product.destroy()
     return _success(
         "ROS2_WORKFLOW_DELETED",
         f"Deleted MCP-owned ROS 2 workflow {graph_path}",

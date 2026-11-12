@@ -149,7 +149,7 @@ def _dispatch(adapter, action, expected_stage=None, prim_path=None,
         # The plugin's asynchronous builder remains the sole owner of the material.
         if getattr(api, "API_VERSION", 0) < 2:
             raise MPMRequestError("MPM_API_VERSION_UNSUPPORTED", "MPM provider API 2 is required for tracked non-authoring builds")
-        queued = api.request_rebuild(expected_stage, prim_path, author=False, context=context(stage))
+        queued = ext.request_build(cfg, author=False, context=context(stage), authored_hash=revision)
         return {"status": "success", "preview": False, "applied": True,
                 "job_id": queued["job_id"], "data": queued,
                 "readback": queued, "saved": False, "completed": False,

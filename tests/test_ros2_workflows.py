@@ -3,6 +3,9 @@
 
 """Offline handler contracts for Task 17 ROS 2 workflows."""
 
+import asyncio
+from unittest.mock import Mock
+
 from isaac_sim_mcp_extension.handlers import ros2
 
 
@@ -182,3 +185,57 @@ def test_delete_refuses_foreign_graph(monkeypatch):
     result = ros2.delete_ros2_workflow(_StoppedAdapter(), "/World/Foreign", preview=False)
 
     assert result["code"] == "ROS2_WORKFLOW_NOT_OWNED"
+
+
+def test_sensor_workflow_owns_independent_render_product_until_delete(monkeypatch):
+    product = Mock(path='/Render/Owned')
+    captured = []
+
+    async def create(adapter, kind, **params):
+        captured.append(params)
+        return {'status': 'success', 'readback': {}}
+
+    monkeypatch.setattr(ros2, '_create_workflow', create)
+    monkeypatch.setattr(ros2, '_copy_render_product', Mock(return_value=product))
+    monkeypatch.setattr(ros2, '_OWNED_RENDER_PRODUCTS', {})
+    result = asyncio.run(ros2._create_sensor_workflow(_StoppedAdapter(), 'camera', own_render_product=True,
+        preview=False, graph_path='/World/ROS', render_product_path='/Render/Sensor'))
+    assert captured[0]['preview'] is True
+    assert captured[1]['render_product_path'] == '/Render/Owned'
+    assert result['readback']['owned_render_product'] == '/Render/Owned'
+    product.destroy.assert_not_called()
+    monkeypatch.setattr(ros2, '_marker', lambda _: {'workflow_type': 'camera'})
+    monkeypatch.setattr(ros2.graphs, 'delete_action_graph', lambda *a, **kw: {'status': 'success'})
+    ros2.delete_ros2_workflow(_StoppedAdapter(), '/World/ROS', preview=True)
+    product.destroy.assert_not_called()
+    ros2.delete_ros2_workflow(_StoppedAdapter(), '/World/ROS', preview=False)
+    product.destroy.assert_called_once()
+    assert not ros2._OWNED_RENDER_PRODUCTS
+
+
+def test_failed_sensor_graph_releases_only_new_render_product(monkeypatch):
+    product = Mock(path='/Render/Owned')
+
+    async def create(adapter, kind, **params):
+        return {'status': 'success' if params['preview'] else 'error'}
+
+    monkeypatch.setattr(ros2, '_create_workflow', create)
+    monkeypatch.setattr(ros2, '_copy_render_product', Mock(return_value=product))
+    monkeypatch.setattr(ros2, '_OWNED_RENDER_PRODUCTS', {})
+    result = asyncio.run(ros2._create_sensor_workflow(_StoppedAdapter(), 'lidar', own_render_product=True,
+        preview=False, graph_path='/World/ROS', render_product_path='/Render/Sensor'))
+    assert result['status'] == 'error'
+    product.destroy.assert_called_once()
+    assert not ros2._OWNED_RENDER_PRODUCTS
+
+
+def test_explicit_sensor_render_product_is_borrowed(monkeypatch):
+    async def create(*a, **kw):
+        return {'status': 'success'}
+
+    copy = Mock()
+    monkeypatch.setattr(ros2, '_create_workflow', create)
+    monkeypatch.setattr(ros2, '_copy_render_product', copy)
+    asyncio.run(ros2._create_sensor_workflow(_StoppedAdapter(), 'camera', own_render_product=False,
+        preview=False, graph_path='/World/ROS', render_product_path='/Render/UserOwned'))
+    copy.assert_not_called()

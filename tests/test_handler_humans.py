@@ -74,6 +74,19 @@ def test_manual_behavior_leaves_runtime_control_to_interaction_scripts():
     assert _build_routines("manual", None, None, None, None) == []
 
 
+def test_behavior_agent_discovery_supports_codeless_schema(monkeypatch):
+    from pxr import Usd
+
+    prim = MagicMock()
+    prim.GetPath.return_value = '/World/Person/Root'
+    prim.HasAPI.side_effect = lambda name: name == 'BehaviorAgentAPI'
+    monkeypatch.setattr(Usd, 'PrimRange', lambda _: [prim], raising=False)
+    # 6.2 registers a codeless schema and no longer ships BehaviorSchema.py.
+    monkeypatch.setitem(sys.modules, 'BehaviorSchema', None)
+    assert humans._find_behavior_agent_paths(prim) == ['/World/Person/Root']
+    prim.HasAPI.assert_called_once_with('BehaviorAgentAPI')
+
+
 def test_unknown_behavior_fails_closed():
     with pytest.raises(ValueError, match="wander, patrol, stop, manual"):
         _build_routines("dance", None, None, None, None)

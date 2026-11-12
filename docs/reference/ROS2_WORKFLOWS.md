@@ -53,6 +53,11 @@ Camera and LiDAR accept an explicit `render_product_path` override for a render 
 
 ## Ownership and deletion
 
+6.2 生命周期补充：未显式传 `render_product_path` 时，工作流持有独立 render product，
+不再借用会被 MCP sensor Stop 清理销毁的对象；正常 Stop → Play 后仍可发布。
+删除工作流、替换 stage 或退出扩展时释放；显式传入的外部 product 仍由调用者维护，MCP 不销毁。
+当前实机证据见 [6.2 最终验收](../development/MCP_6_2_ACCEPTANCE.md)。
+
 Created graphs receive three USD custom-data keys: schema version, workflow type and topic. `delete_ros2_workflow` refuses graphs without this marker using `ROS2_WORKFLOW_NOT_OWNED`; it delegates exact deletion/read-back/rollback to the OmniGraph lifecycle handler. Successful deletion requires graph, backing prim and ownership marker to be absent.
 
 ## Stable errors

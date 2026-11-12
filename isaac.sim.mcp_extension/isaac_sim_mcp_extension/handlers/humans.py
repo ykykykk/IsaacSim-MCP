@@ -93,13 +93,12 @@ def _human_marker(prim: Any) -> Optional[dict[str, Any]]:
 
 
 def _find_behavior_agent_paths(prim: Any) -> list[str]:
-    import BehaviorSchema
     from pxr import Usd
 
     return sorted(
         str(candidate.GetPath())
         for candidate in Usd.PrimRange(prim)
-        if candidate.HasAPI(BehaviorSchema.BehaviorAgentAPI)
+        if candidate.HasAPI("BehaviorAgentAPI")
     )
 
 
@@ -450,7 +449,6 @@ async def _wait_for_navmesh(
 
 async def _refresh_behavior_agents(stage: Any, character_paths: Sequence[str]) -> list[str]:
     """Resync dynamically loaded SkelRoots with the Behavior Core scanner."""
-    import BehaviorSchema
     import omni.kit.app
     from pxr import Usd, UsdSkel
 
@@ -460,11 +458,11 @@ async def _refresh_behavior_agents(stage: Any, character_paths: Sequence[str]) -
         if not character_prim or not character_prim.IsValid():
             continue
         for prim in Usd.PrimRange(character_prim):
-            if prim.IsA(UsdSkel.Root) and prim.HasAPI(BehaviorSchema.BehaviorAgentAPI):
+            if prim.IsA(UsdSkel.Root) and prim.HasAPI("BehaviorAgentAPI"):
                 # NVIDIA's Behavior Core tests use this re-application after a
                 # character payload is loaded into an already-open stage. It
                 # emits the prim resync that the initial stage scan can miss.
-                BehaviorSchema.BehaviorAgentAPI.Apply(prim)
+                prim.ApplyAPI("BehaviorAgentAPI")
                 refreshed.append(str(prim.GetPath()))
 
     app = omni.kit.app.get_app()
@@ -521,13 +519,11 @@ def list_humans(
                 humans.append(_describe_human(stage, prim, marker, agent_paths))
                 seen.update(agent_paths)
         if include_external:
-            import BehaviorSchema
-
             for prim in stage.TraverseAll():
                 path = str(prim.GetPath())
                 if path in seen or not path.startswith(root_prim_path.rstrip("/") + "/"):
                     continue
-                if prim.HasAPI(BehaviorSchema.BehaviorAgentAPI):
+                if prim.HasAPI("BehaviorAgentAPI"):
                     humans.append(_describe_human(stage, prim, None, [path]))
         humans.sort(key=lambda item: item["human_path"])
         return {"status": "success", "humans": humans, "count": len(humans), "root_prim_path": root_prim_path}

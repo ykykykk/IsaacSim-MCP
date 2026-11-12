@@ -1,7 +1,7 @@
 r"""Live Task 4.2 verifier with an out-of-process ROS 2 Clock subscriber.
 
 Run the parent with the project venv. It launches this same file in subscriber
-mode through C:\isaacsim\python.bat and the bundled Jazzy rclpy package.
+mode through ISAACSIM_ROOT/python.bat and the bundled Jazzy rclpy package.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from pathlib import Path
 GRAPH_PATH = "/World/MCP_Task_4_2_Clock"
 TOPIC = "/mcp_task_4_2/clock"
 DOMAIN_ID = 42
+ISAAC_ROOT = Path(os.environ.get("ISAACSIM_ROOT", "F:/isaac-sim/6.2.0"))
 
 
 def _subscriber(output: Path, ready: Path, timeout: float) -> int:
@@ -66,14 +67,23 @@ def _data(response):
 
 
 def _ros_environment() -> dict[str, str]:
-    core = Path(r"C:\isaacsim\exts\isaacsim.ros2.core")
+    core = ISAAC_ROOT / "exts/isaacsim.ros2.core"
     distro = "jazzy"
     env = os.environ.copy()
     env["ROS_DISTRO"] = distro
     env["ROS_DOMAIN_ID"] = str(DOMAIN_ID)
     env["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
-    env["PYTHONPATH"] = str(core / distro / "rclpy")
-    env["PATH"] = os.pathsep.join([env.get("PATH", ""), str(core / distro / "lib"), str(core / "bin")])
+    # Use the same official NumPy bundle as Kit. The RC's ROS NumPy wheel
+    # forwards BLAS to mkl_rt.3.dll, which is not included in the ROS bundle.
+    archives = list((ISAAC_ROOT / 'extscache').glob('omni.kit.pip_archive-*/pip_prebundle'))
+    if len(archives) != 1:
+        raise RuntimeError(f'Expected one installed Kit Python archive, found {archives}')
+    env["PYTHONPATH"] = os.pathsep.join([str(archives[0]), str(core / distro / "rclpy")])
+    # rpyutils registers every PATH entry with AddDllDirectory (unordered on
+    # Windows). Isolate this subprocess from conflicting Conda/app fmt DLLs.
+    windows = Path(env["SYSTEMROOT"])
+    env["PATH"] = os.pathsep.join(map(str, [core / distro / "lib", core / "bin",
+        ISAAC_ROOT / "kit/python", windows / "System32", windows]))
     return env
 
 
@@ -88,6 +98,12 @@ def _parent() -> int:
     evidence = {}
     original_graphs = []
     try:
+        root = Path(os.environ["ISAAC_MCP_VALIDATION_ROOT"]).resolve(strict=True)
+        capabilities = _data(connection.send_command("system.get_capabilities"))
+        runtime = capabilities["runtime"]
+        assert runtime["isaac_sim_version"].startswith("6.2.")
+        assert Path(runtime["log_file"]).parent == root
+        assert Path(runtime["root_identifier"]).parent == root
         _data(connection.send_command("simulation.stop"))
         status = _data(connection.send_command("ros2.get_status"))
         if not status.get("prerequisites_met"):
@@ -125,7 +141,7 @@ def _parent() -> int:
 
         subscriber = subprocess.Popen(
             [
-                r"C:\isaacsim\python.bat",
+                str(ISAAC_ROOT / "python.bat"),
                 str(Path(__file__).resolve()),
                 "--subscriber",
                 "--output",
@@ -139,6 +155,7 @@ def _parent() -> int:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
         ready_deadline = time.perf_counter() + 10
         while not ready.exists() and time.perf_counter() < ready_deadline:
@@ -172,7 +189,7 @@ def _parent() -> int:
         assert restored_paths == original_graphs
         evidence = {
             "status": "success",
-            "command_count": 106,
+            "command_count": capabilities["extension"]["command_count"],
             "extensions": status["extensions"],
             "preview": preview,
             "created": created_data,
