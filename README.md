@@ -1,11 +1,12 @@
 # IsaacSim-MCP
 
-> 本机维护版：Isaac Sim 6.2 / `0.6.0+bauma.20261112`，基于 Tim 修复分支 `4bb95d8`。
-> 安装路径、MPM 工具与回退说明见 [本机 6.2 配置](docs/ISAAC_6_2_LOCAL.md)。下文保留上游兼容性与历史验证范围。
+> 当前代码版本 **0.7.0**：多层 USD 事务、MPM 构建任务、定向保存与领域工具集。
+> [工作流与安装指南](docs/WORKFLOW_6_2.md) · [设计方案](docs/development/ISAAC_6_2_WORKFLOW_PLAN.md)
+> 此轮未运行测试或仿真；前版空宿主只读检查不覆盖新增写入和构建逻辑。
 
 IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控制 NVIDIA Isaac Sim。涵蓋 USD 場景、機器人、感測器、物理、Action Graph、ROS 2、Replicator SDG、動畫人物、NVIDIA 資產與模擬控制。
 
-主要驗證環境是 Windows 與 Isaac Sim 6.0.1。本專案延伸自 [whats2000/isaacsim-mcp-server](https://github.com/whats2000/isaacsim-mcp-server)，沿用 MIT License。
+本地开发目标是 Windows 与 Isaac Sim 6.2；上游历史验证环境主要为 6.0.1，两者证据不混用。本專案延伸自 [whats2000/isaacsim-mcp-server](https://github.com/whats2000/isaacsim-mcp-server)，沿用 MIT License。
 
 ## Table of Contents
 
@@ -15,8 +16,6 @@ IsaacSim-MCP 讓支援 MCP 的 AI client 透過具名、可驗證的 tools 控�
 - [Configuration](#configuration)
 - [Running IsaacSim-MCP](#running-isaacsim-mcp)
 - [Remote MCP Access](#remote-mcp-access)
-  - [Tailscale Funnel](#tailscale-funnel)
-  - [ChatGPT MCP Connector](#chatgpt-mcp-connector)
 - [支援版本](#支援版本)
 - [文件入口](#文件入口)
 - [Safety 與 verification](#safety-與-verification)
@@ -60,7 +59,7 @@ flowchart LR
 安裝 MCP Server：
 
 ```powershell
-git clone https://github.com/Tim0320/IsaacSim-MCP.git
+git clone https://github.com/ykykykk/IsaacSim-MCP.git
 cd IsaacSim-MCP
 py -3.10 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
@@ -97,7 +96,7 @@ Streamable HTTP 使用另一組設定：
 | `ISAAC_MCP_HTTP_PORT` | `8000` | MCP HTTP listener port。 |
 | `ISAAC_MCP_TOOL_PROFILE` | `legacy` | `legacy` 保留相容工具 surface；`consolidated` 提供合併 surface；`full` 僅供遷移與測試。實際數量以當次 `tools/list` 為準。 |
 | `MCP_ALLOWED_HOSTS` | 未設定 | 額外允許送到 HTTP endpoint 的 exact Host header，以逗號分隔；loopback hosts 永遠保留。 |
-| `ISAAC_MCP_RUNTIME_STATE_FILE` | `%LOCALAPPDATA%\IsaacSim-MCP\runtime-state.json` | Supervisor 與 MCP Server 共用的 bounded crash/restart 狀態檔。 |
+| `ISAAC_MCP_RUNTIME_STATE_FILE` | `%LOCALAPPDATA%\IsaacSim-MCP\6.2\runtime-<port>.json` | Supervisor 與 MCP Server 共用的 bounded crash/restart 狀態檔。 |
 | `ISAAC_MCP_RUNTIME_PROBE_TIMEOUT_SECONDS` | `1` | `get_runtime_status` protocol health probe timeout。 |
 | `ISAAC_MCP_RUNTIME_LOG_FILE` | 自動尋找最新 Kit log | 可選的 Kit log 路徑；`get_runtime_status` 只回傳 bounded、redacted error/crash 摘要。 |
 
@@ -126,7 +125,7 @@ $env:ISAACSIM_ROOT = "C:\isaacsim"
 
 Supervisor 會沿用既有 launcher 的 Isaac Sim 6.0.1、Extension、port 與 Physics GPU guard。非零 exit code 視為異常退出，預設最多在 300 秒內重啟 3 次並使用 exponential backoff；exit code `0` 視為正常關閉，不會自動重開。啟動前若 protocol health probe 已找到健康 runtime，或 `8766` 已被無回應程序占用，supervisor 都會拒絕再啟動一份 Isaac Sim。需要 one-shot 行為時仍可使用 `.\scripts\run_isaac_sim.ps1`。
 
-Supervisor 與 MCP Server 是兩個獨立程序。Codex／Claude 仍由 client 用 stdio 啟動 `isaac_mcp.server`；Streamable HTTP 仍用下方命令啟動。Supervisor 狀態預設寫入 `%LOCALAPPDATA%\IsaacSim-MCP\runtime-state.json`，不包含 environment、command source 或 log 內容。
+Supervisor 與 MCP Server 是兩個獨立程序。Codex／Claude 仍由 client 用 stdio 啟動 `isaac_mcp.server`；Streamable HTTP 仍用下方命令啟動。Supervisor 狀態預設寫入 `%LOCALAPPDATA%\IsaacSim-MCP\6.2\runtime-<port>.json`，不包含 environment、command source 或 log 內容。
 
 當 Isaac Sim crash、正在重啟或超過 restart budget 時，MCP tools 會回傳 `ISAAC_RUNTIME_RECOVERING`、`ISAAC_RUNTIME_CRASHED` 或 `ISAAC_RUNTIME_UNAVAILABLE`。呼叫 `get_runtime_status` 可在 `8766` 關閉時讀到 exit code、時間、attempt、restart count、health 狀態、最新 Kit log 的 bounded crash 摘要與建議動作。Connection loss 後不會自動 replay write；runtime 恢復後必須先 read-back，再決定是否用原 idempotency key 重送。
 
@@ -148,112 +147,9 @@ MCP HTTP endpoint 是 `http://127.0.0.1:8000/mcp`。先呼叫 `get_capabilities`
 
 ## Remote MCP Access
 
-IsaacSim-MCP 預設只在本機使用。ChatGPT 等雲端 MCP client 無法直接連到 `localhost`、`127.0.0.1` 或 `192.168.x.x` 私有位址。它們需要能從 public internet 存取的 HTTPS endpoint，例如 Tailscale Funnel：
-
-```text
-ChatGPT
-   ↓ HTTPS
-Public MCP Endpoint
-   ↓
-IsaacSim-MCP
-   ↓ TCP 127.0.0.1:8766
-Isaac Sim
-```
-
-| Method | Tailnet only | Public Internet | ChatGPT can access |
-|---|---:|---:|---:|
-| localhost | No | No | No |
-| Tailscale Serve | Yes | No | No |
-| Tailscale Funnel | Yes | Yes | Yes |
-
-[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) 只把服務提供給同一個 tailnet；[Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) 會建立 public internet 可達的 HTTPS endpoint。ChatGPT MCP Connector 需要 Funnel 或其他 public HTTPS deployment。
-
-### Tailscale Funnel
-
-1. 從 [Tailscale Download](https://tailscale.com/download) 安裝適合目前作業系統的版本，登入後啟用本機 Tailscale：
-
-   ```bash
-   tailscale up
-   ```
-
-2. 啟動 Isaac Sim Extension，接著在 repository 根目錄啟動 Streamable HTTP server。將範例 hostname 換成 `tailscale funnel` 顯示的完整 hostname：
-
-   ```powershell
-   $env:ISAAC_MCP_TRANSPORT = "streamable-http"
-   $env:ISAAC_MCP_HTTP_HOST = "127.0.0.1"
-   $env:ISAAC_MCP_HTTP_PORT = "8000"
-   $env:MCP_ALLOWED_HOSTS = "localhost,127.0.0.1,your-device.your-tailnet.ts.net"
-
-   .\.venv\Scripts\python.exe -m isaac_mcp.server
-   ```
-
-   `MCP_ALLOWED_HOSTS` 使用 FastMCP 的 exact Host matching。專案會替每個完整 hostname 接受有 port 與無 port 形式，但不接受 `.ts.net` suffix 或 `*.ts.net` wildcard。loopback hosts 永遠保留，所以加入外部 hostname 不會破壞本機 HTTP 存取。
-
-3. 在另一個 terminal 建立背景 Funnel。`8000` 是 repository 的預設 HTTP MCP port：
-
-   ```bash
-   tailscale funnel --bg 8000
-   ```
-
-   預期輸出類似：
-
-   ```text
-   Available on the internet:
-
-   https://your-device.your-tailnet.ts.net
-
-   |-- / proxy http://127.0.0.1:8000
-   ```
-
-   公開 MCP URL 是 `https://your-device.your-tailnet.ts.net/mcp`。
-
-4. 查看狀態或停止同一個 Funnel：
-
-   ```bash
-   tailscale funnel status
-   tailscale funnel --bg 8000 off
-   ```
-
-   `tailscale funnel reset` 會清除本機全部 Funnel configuration。完整參數以 [Tailscale Funnel CLI](https://tailscale.com/docs/reference/tailscale-cli/funnel) 為準。
-
-5. 從外部網路驗證：
-
-   ```bash
-   curl -i https://your-device.your-tailnet.ts.net/mcp
-   ```
-
-   Streamable HTTP 對一般 GET 的回應會依 request header 和 transport 狀態而異，`200`、`405` 或 `406` 都可能表示請求已到達 endpoint。結果不應再是 `421 Misdirected Request`／`Invalid Host header`，也不應出現 `502 Bad Gateway` 或 timeout。
-
-### ChatGPT MCP Connector
-
-Funnel 驗證成功後，依 [OpenAI Developer mode 與 MCP apps 官方說明](https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta) 在 ChatGPT Developer Mode 新增 MCP Connector：
-
-```text
-Name:
-IsaacSim
-
-MCP Server URL:
-https://your-device.your-tailnet.ts.net/mcp
-
-Authentication:
-No authentication
-```
-
-需要讓 MCP client 直接取得 RGB 圖片時，呼叫：
-
-```text
-capture_camera_output(
-  prim_path="/World/Camera",
-  output_type="rgb",
-  return_mode="image"
-)
-```
-
-`return_mode="image"` 會回傳 schema 1.0 文字 metadata 與 MCP-native `ImageContent`。Server 會驗證 PNG base64、byte size 與 SHA-256，且不會把大型 base64 重複放進文字 metadata。`artifact` 仍是預設模式，因此既有 Codex／Claude stdio 與下載流程不變。Client 是否在 UI 顯示圖片、把圖片交給 vision model，取決於該 client 對 MCP image content 的支援；要宣稱 ChatGPT 可見，必須完成實際 Connector acceptance，不能只依 server unit test 推論。
-
-`capture_image` 與 `capture_camera_output` 的 MCP input schema 會把 `return_mode` 公開為 `metadata | artifact | inline | image` enum，Agent 不需要從說明文字猜測。Camera 新建或解析度變更後若 RTX read 回 `CAMERA_FRAME_NOT_READY`，MCP Server 會在同一個 tool call 內做 bounded polling：最多 3 次 capture、兩段 500 ms wait，總 warm-up wait 上限 1 秒。正常 ready frame 不會額外等待；第 3 次仍未取得 frame 才回傳錯誤。
-
-IsaacSim-MCP 目前沒有 HTTP authentication。`MCP_ALLOWED_HOSTS` 只防止不受信任的 Host header，不是身分驗證。公開 Funnel 會讓任何能連到該 URL 的人嘗試呼叫 MCP tools，可能控制本機 Isaac Sim。只在你接受這個風險時啟用，使用完立即停止 Funnel；正式共享環境應在 MCP server 前加入 authentication、authorization 與存取稽核。
+默认使用本地 stdio，不需要 HTTP、Funnel 或公网入口。
+现有 HTTP transport 没有身份认证；Host 校验不等于认证，不能作为公开控制接口直接部署。
+本版不部署公网服务。如确需远程访问，应先独立配置认证、授权和访问审计；不要把未认证端口公开。
 
 ## 支援版本
 

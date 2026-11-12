@@ -154,11 +154,23 @@ class CapabilityRuntime:
                 newton_reason=untested,
             ),
         }
+        for feature in features.values():
+            for backend, record in feature["backends"].items():
+                implemented = record["state"] == "supported"
+                historical = record.get("evidence") or record.get("reason")
+                record["implementation"] = "implemented" if implemented else record["state"]
+                record["availability"] = "available" if implemented else "unknown" if record["state"] == "untested" else "unsupported"
+                record["evidence_version"] = "6.0.1"
+                record["evidence_scope"] = historical
+                record["runtime_version"] = self._context.isaac_version
+                if self._context.isaac_version != "6.0.1":
+                    record["verification"] = "unverified"
         return {
             "schema_version": "1.0",
             "active_backend": self._context.active_backend,
             "policy": {
-                "supported_requires_live_verification": True,
+                "supported_requires_live_verification": False,
+                "supported_means": "implemented; consult version-scoped verification separately",
                 "null_supported_means": "untested",
                 "false_supported_means": "unsupported",
             },

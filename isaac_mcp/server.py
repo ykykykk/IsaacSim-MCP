@@ -34,6 +34,10 @@ from typing import Any, AsyncIterator, Dict
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
+from isaac_mcp.config import apply_environment
+
+_EFFECTIVE_CONFIG = apply_environment()
+
 from isaac_mcp.connection import get_isaac_connection, reset_isaac_connection
 from isaac_mcp.tool_profiles import resolve_tool_profile
 from isaac_mcp.tools import register_all_tools
@@ -181,7 +185,7 @@ def _transport_security_settings() -> TransportSecuritySettings:
 def _create_mcp() -> FastMCP:
     """Create the MCP server with Streamable HTTP settings from the environment."""
     profile = resolve_tool_profile()
-    instructions = _INSTRUCTIONS
+    instructions = _INSTRUCTIONS + "\nOnly tools selected by the configured domains are available. Do not invoke hidden tools.\n"
     if profile == "consolidated":
         for old, new in (
             ("get_prim_info", "query_prim(action=get)"),

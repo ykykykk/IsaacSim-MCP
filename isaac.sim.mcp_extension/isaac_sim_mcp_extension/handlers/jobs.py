@@ -155,6 +155,8 @@ def start_job(command_type: str, params: Optional[Dict[str, Any]] = None, deadli
 
 
 def _provider_status(job_id: str) -> Optional[Dict[str, Any]]:
+    if job_id.startswith("mpm-"):
+        return _mpm_job("get", job_id)
     if job_id.startswith("motion-"):
         handler = _REGISTRY.get("motion.get_status")
     elif job_id.startswith("sdg-"):
@@ -175,6 +177,8 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
 
 
 def cancel_job(job_id: str) -> Dict[str, Any]:
+    if job_id.startswith("mpm-"):
+        return _mpm_job("cancel", job_id)
     job = _JOBS.get(job_id)
     if job is not None:
         if job["state"] in TERMINAL_STATES:
@@ -198,4 +202,28 @@ def list_jobs(count: int = 50, include_terminal: bool = True) -> Dict[str, Any]:
         return _error("INVALID_JOB_QUERY", f"count must be an integer from 1 through {MAX_JOBS}")
     jobs = [job for job in _JOBS.values() if include_terminal or job["state"] not in TERMINAL_STATES]
     data = [_snapshot(job) for job in jobs[-count:]]
-    return {"status": "success", "code": "JOB_LIST", "message": f"Returned {len(data)} managed jobs", "data": {"jobs": data, "count": len(data), "max_jobs": MAX_JOBS}}
+    provider = _mpm_job("list", count=count, include_terminal=include_terminal)
+    if provider.get("status") == "success":
+        data = sorted(data + provider["data"], key=lambda x: x["created_at"], reverse=True)[:count]
+    return {"status": "success", "code": "JOB_LIST", "message": f"Returned {len(data)} managed jobs",
+            "data": {"jobs": data, "count": len(data), "max_jobs": MAX_JOBS,
+                     "mpm_provider": provider.get("code", "OK")}}
+
+
+def _mpm_job(action, job_id=None, count=50, include_terminal=True):
+    import omni.kit.app
+    if not omni.kit.app.get_app().get_extension_manager().is_extension_enabled("sany.granular_mpm"):
+        return _error("MPM_PROVIDER_DISABLED", "MPM provider is disabled", status="unsupported")
+    from sany.granular_mpm import agent_api
+    if getattr(agent_api, "API_VERSION", 0) < 2:
+        return _error("MPM_API_VERSION_UNSUPPORTED", "MPM provider API 2 required", status="unsupported")
+    try:
+        if action == "get":
+            data = agent_api.get_job(job_id)
+        elif action == "cancel":
+            data = agent_api.cancel_job(job_id)
+        else:
+            data = agent_api.list_jobs(count, include_terminal)
+        return {"status": "success", "code": "MPM_JOB_STATUS", "data": data}
+    except (ValueError, RuntimeError) as exc:
+        return _error("MPM_JOB_REQUEST_FAILED", str(exc))

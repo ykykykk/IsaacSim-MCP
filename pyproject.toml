@@ -39,9 +39,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Tim0320/IsaacSim-MCP"
-Repository = "https://github.com/Tim0320/IsaacSim-MCP"
-Issues = "https://github.com/Tim0320/IsaacSim-MCP/issues"
+Homepage = "https://github.com/ykykykk/IsaacSim-MCP"
+Repository = "https://github.com/ykykykk/IsaacSim-MCP"
+Issues = "https://github.com/ykykykk/IsaacSim-MCP/issues"
 
 [project.scripts]
 isaacsim-mcp-server = "isaac_mcp.server:main"

@@ -44,6 +44,7 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
                 "transport": "stdio_to_tcp",
                 "live_control_port": conn.port,
                 "tool_profile": tool_profile,
+                "tool_domains": list(getattr(mcp, "tool_domains", [])),
                 "public_tool_count": tool_count(tool_profile),
                 "available_tool_profiles": sorted(VALID_TOOL_PROFILES),
                 "consolidated_replacements": CONSOLIDATED_REPLACEMENTS if tool_profile == "consolidated" else {},

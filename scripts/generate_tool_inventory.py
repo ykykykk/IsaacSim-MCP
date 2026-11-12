@@ -18,7 +18,7 @@ OUTPUTS = {
 
 
 def render(profile: str = "legacy") -> str:
-    tools = inventory(profile)
+    tools = inventory(profile, domains="all")
     grouped: dict[str, list[str]] = defaultdict(list)
     for item in tools:
         grouped[item["module"]].append(item["tool"])
@@ -59,7 +59,7 @@ def main() -> int:
                 raise SystemExit(f"tracked {profile} tool inventory is stale; run scripts/generate_tool_inventory.py")
         else:
             output.write_text(expected, encoding="utf-8")
-        counts.append(f"{profile}={len(inventory(profile))}")
+        counts.append(f"{profile}={len(inventory(profile, domains="all"))}")
     print(f"tools={','.join(counts)}; mode={'check' if args.check else 'write'}")
     return 0
 

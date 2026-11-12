@@ -34,7 +34,7 @@ import time
 from inspect import Parameter, Signature
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Optional, get_origin, get_type_hints
 
-from mcp.types import CallToolResult, ImageContent, TextContent
+from mcp.types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 
 from isaac_mcp.command_context import command_id_var, idempotency_key_var
@@ -68,6 +68,7 @@ def register_all_tools(mcp: FastMCP, get_connection: Callable[[], IsaacConnectio
         materials,
         motion,
         mpm,
+        workflow,
         objects,
         physics,
         replicator,
@@ -98,6 +99,7 @@ def register_all_tools(mcp: FastMCP, get_connection: Callable[[], IsaacConnectio
         robots,
         motion,
         mpm,
+        workflow,
         sensors,
         materials,
         assets,
@@ -107,11 +109,14 @@ def register_all_tools(mcp: FastMCP, get_connection: Callable[[], IsaacConnectio
     ]:
         module.register_tools(schema_mcp, runtime_aware_connection)
 
-    hidden = (
-        ADDED_CONSOLIDATED_TOOLS if profile == "legacy" else REPLACED_LEGACY_TOOLS if profile == "consolidated" else ()
-    )
-    for name in hidden:
+    from isaac_mcp.tool_inventory import tool_names
+    from isaac_mcp.tool_profiles import resolve_tool_domains
+    selected = set(tool_names(profile))
+    mcp.tool_profile = profile
+    mcp.tool_domains = sorted(resolve_tool_domains())
+    for name in schema_mcp._original_tools.keys() - selected:
         _remove_registered_tool(mcp, name)
+
 
 
 def _remove_registered_tool(mcp: FastMCP, name: str) -> None:
@@ -330,6 +335,10 @@ class _ResponseSchemaMCP:
         return getattr(self._mcp, name)
 
     def tool(self, *args: Any, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        name = str(args[0] if args else kwargs.get("name", ""))
+        readonly = name.startswith(("get_", "list_", "read_", "query_")) or name == "preview_source_commit"
+        kwargs.setdefault("annotations", ToolAnnotations(readOnlyHint=readonly,
+                          destructiveHint=not readonly, idempotentHint=readonly, openWorldHint=True))
         register = self._mcp.tool(*args, **kwargs)
 
         def decorator(function: Callable[..., Any]) -> Callable[..., Any]:

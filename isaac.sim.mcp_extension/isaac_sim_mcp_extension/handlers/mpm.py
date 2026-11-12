@@ -3,6 +3,8 @@
 import hashlib
 import json
 from functools import partial
+from ..workflow_context import context
+from .. import usd_transactions as transactions
 
 
 class MPMRequestError(ValueError):
@@ -12,7 +14,7 @@ class MPMRequestError(ValueError):
 
 
 def register(registry, adapter):
-    for action in ("get_status", "get_config", "update_config", "request_rebuild"):
+    for action in ("get_status", "get_config", "update_config", "request_rebuild", "list_configs"):
         registry[f"mpm.{action}"] = partial(_dispatch, adapter, action)
 
 
@@ -64,11 +66,29 @@ def _require_idle(ext):
 
 
 def _dispatch(adapter, action, expected_stage=None, prim_path=None,
-              expected_config_sha256=None, changes=None, preview=True):
+              expected_config_sha256=None, changes=None, preview=True, offset=0, limit=50):
     try:
         api, attr_name, config_type, ext = _plugin()
         if action == "get_status":
-            return {"status": "success", **api.status()}
+            return {"status": "success", **api.status(), "context": context(adapter.get_stage())}
+        if action == "list_configs":
+            if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+                raise ValueError("offset must be non-negative; limit must be 1..100")
+            stage = adapter.get_stage()
+            if stage is None:
+                raise ValueError("No stage")
+            rows, found = [], 0
+            for prim in stage.Traverse():
+                item = prim.GetAttribute(attr_name)
+                if item and item.HasAuthoredValueOpinion():
+                    if found >= offset:
+                        rows.append({"prim_path": str(prim.GetPath())})
+                    found += 1
+                    if len(rows) > limit:
+                        break
+            return {"status": "success", "context": context(stage), "configs": rows[:limit],
+                    "next_offset": offset + limit if len(rows) > limit else None,
+                    "scope": "loaded active prims only; payloads are not auto-loaded"}
         stage, attr, authored, cfg, revision = _configuration(
             adapter, expected_stage, prim_path, attr_name, config_type,
         )
@@ -78,6 +98,7 @@ def _dispatch(adapter, action, expected_stage=None, prim_path=None,
             "config_sha256": revision,
         }
         if action == "get_config":
+            snapshot.update(_config_sources(stage, attr, cfg, ext, config_type))
             return {"status": "success", **snapshot}
         if not isinstance(preview, bool):
             raise ValueError("preview must be boolean")
@@ -106,9 +127,16 @@ def _dispatch(adapter, action, expected_stage=None, prim_path=None,
             layer = stage.GetSessionLayer()
             if not layer.permissionToEdit:
                 raise MPMRequestError("MPM_SESSION_READ_ONLY", "Session layer is not editable")
-            with Usd.EditContext(stage, layer):
-                if not attr.Set(text):
-                    raise RuntimeError("USD refused the MPM configuration edit")
+            before = transactions.capture(stage, properties=[(layer, attr.GetPath())])
+            try:
+                with Usd.EditContext(stage, layer):
+                    if not attr.Set(text):
+                        raise RuntimeError("USD refused the MPM configuration edit")
+                if attr.Get() != text:
+                    raise RuntimeError("MPM configuration read-back differs")
+            except Exception as exc:
+                return transactions.failure(stage, before, exc, "MPM_CONFIG_WRITE_FAILED")
+            result["transaction_id"] = transactions.retain(stage, before)
             result.update(applied=True, config_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
                           readback={"authored_config": json.loads(attr.Get()), "layer": layer.identifier})
             return result
@@ -118,8 +146,11 @@ def _dispatch(adapter, action, expected_stage=None, prim_path=None,
         if preview:
             return {"status": "success", "preview": True, "applied": False, **snapshot}
         # The plugin's asynchronous builder remains the sole owner of the material.
-        queued = api.request_rebuild(expected_stage, prim_path, author=False)
+        if getattr(api, "API_VERSION", 0) < 2:
+            raise MPMRequestError("MPM_API_VERSION_UNSUPPORTED", "MPM provider API 2 is required for tracked non-authoring builds")
+        queued = api.request_rebuild(expected_stage, prim_path, author=False, context=context(stage))
         return {"status": "success", "preview": False, "applied": True,
+                "job_id": queued["job_id"], "data": queued,
                 "readback": queued, "saved": False, "completed": False,
                 "message": "Rebuild queued, not completed; read get_mpm_status"}
     except MPMRequestError as exc:
@@ -129,3 +160,38 @@ def _dispatch(adapter, action, expected_stage=None, prim_path=None,
     except Exception as exc:
         return {"status": "error", "code": "MPM_OPERATION_FAILED",
                 "message": f"{type(exc).__name__}: {exc}", "applied": None}
+
+
+def _config_sources(stage, attr, cfg, ext, config_type):
+    from pxr import Sdf
+
+    def effective(text):
+        parsed = config_type.from_json(text)
+        parsed.prim_path = cfg.prim_path
+        return json.loads(parsed.to_json())
+
+    current = json.loads(cfg.to_json())
+    runtime = json.loads(ext.runtime.config.to_json()) if ext.runtime and ext.runtime.config.prim_path == cfg.prim_path else None
+    layers = []
+    specs = [spec for spec in attr.GetPropertyStack() if spec.HasInfo("default")]
+    for spec in specs[:16]:
+        layer = spec.layer
+        disk_value = None
+        if layer.realPath and not layer.anonymous:
+            disk_layer = Sdf.Layer.OpenAsAnonymous(layer.realPath)
+            if disk_layer is None:
+                raise RuntimeError("Cannot read owning layer on disk: " + layer.realPath)
+            disk_spec = disk_layer.GetAttributeAtPath(spec.path)
+            if disk_spec and disk_spec.HasInfo("default"):
+                disk_value = json.loads(disk_spec.default)
+        layers.append({"layer": layer.identifier, "spec_path": str(spec.path), "dirty": bool(layer.dirty),
+                       "session": layer == stage.GetSessionLayer(), "authored_config": json.loads(spec.default),
+                       "disk_config": disk_value})
+    persistent = next((item for item in layers if not item["session"]), None)
+    disk_effective = effective(json.dumps(persistent["disk_config"])) if persistent and persistent["disk_config"] is not None else None
+    requires_save = disk_effective != current
+    return {"context": context(stage), "layer_configs": layers, "sources_truncated": len(specs) > 16,
+            "runtime_config": runtime, "requires_rebuild": runtime != current,
+            "requires_save": requires_save, "differences": {
+                "runtime_fields": sorted(key for key in current if runtime is None or current[key] != runtime.get(key)),
+                "disk_fields": sorted(key for key in current if disk_effective is None or current[key] != disk_effective.get(key))}}

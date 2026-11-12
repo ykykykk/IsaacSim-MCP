@@ -245,7 +245,9 @@ def get_isaac_connection() -> IsaacConnection:
     global _isaac_connection
     if _isaac_connection is not None:
         return _isaac_connection
-    _isaac_connection = IsaacConnection(host=os.getenv("ISAAC_MCP_HOST", "127.0.0.1"))
+    from isaac_mcp.config import apply_environment
+    effective = apply_environment()
+    _isaac_connection = IsaacConnection(host=effective["host"], port=effective["port"])
     if not _isaac_connection.connect():
         status = get_runtime_status(host=_isaac_connection.host, port=_isaac_connection.port)
         _isaac_connection = None

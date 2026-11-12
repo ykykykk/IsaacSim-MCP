@@ -243,13 +243,13 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         )
 
     @mcp.tool("get_stage_composition")
-    def get_stage_composition(root_path: str = "/") -> str:
+    def get_stage_composition(root_path: str = "/", offset: int = 0, limit: int = 1000) -> str:
         """Read the root layer, full layer stack, prim count, references/payloads, variant selections, semantics, and stage metadata.
 
         Args:
             root_path: Absolute USD root path to inspect.
         """
-        return send("stage.get_composition", {"root_path": root_path})
+        return send("stage.get_composition", {"root_path": root_path, "offset": offset, "limit": limit})
 
     @mcp.tool("edit_sublayer")
     def edit_sublayer(action: str, layer_path: str, index: int = -1, preview: bool = True) -> str:
@@ -342,9 +342,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         )
 
     @mcp.tool("get_typed_attribute")
-    def get_typed_attribute(prim_path: str, attribute: str) -> str:
+    def get_typed_attribute(prim_path: str, attribute: str, include_source: bool = False) -> str:
         """Read a USD attribute value, declared type, and authored-value state in JSON-safe form."""
-        return send("stage.get_attribute", {"prim_path": prim_path, "attribute": attribute})
+        return send("stage.get_attribute", {"prim_path": prim_path, "attribute": attribute, "include_source": include_source})
 
     @mcp.tool("set_typed_attribute")
     def set_typed_attribute(
@@ -371,7 +371,7 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
         )
 
     @mcp.tool("apply_stage_batch")
-    def apply_stage_batch(operations: List[Dict[str, Any]], preview: bool = True, readback_root_path: str = "/") -> str:
+    def apply_stage_batch(operations: List[Dict[str, Any]], preview: bool = True, readback_root_path: str = "/", plan_id: Optional[str] = None) -> str:
         """Preview or apply up to 100 stage composition edits while the timeline is stopped.
 
         Failed application attempts snapshot restoration. Inspect readback and errors;
@@ -385,8 +385,9 @@ def register_tools(mcp: FastMCP, get_connection: "Callable[[], IsaacConnection]"
                 prim_path, attribute, type_name and value.
             preview: Validate without applying when true; default true.
             readback_root_path: Root Prim path for the composition readback; default '/'.
+            plan_id: Preview plan to apply; changed layers or Stage identity reject the write.
         """
         return send(
             "stage.apply_batch",
-            {"operations": operations, "preview": preview, "readback_root_path": readback_root_path},
+            {"operations": operations, "preview": preview, "readback_root_path": readback_root_path, "plan_id": plan_id},
         )

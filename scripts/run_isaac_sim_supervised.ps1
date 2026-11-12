@@ -3,8 +3,8 @@
 
 [CmdletBinding()]
 param(
-    [string]$IsaacSimRoot = $(if ($env:ISAACSIM_ROOT) { $env:ISAACSIM_ROOT } else { "F:\isaac-sim\6.2.0" }),
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
+    [string]$IsaacSimRoot,
+    [int]$Port,
     [string]$PhysicsGpu,
     [ValidateRange(0, 100)]
     [int]$MaxRestarts = 3,
@@ -18,6 +18,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$McpLauncherParameters = $PSBoundParameters
+. (Join-Path $PSScriptRoot "Resolve-McpConfig.ps1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 

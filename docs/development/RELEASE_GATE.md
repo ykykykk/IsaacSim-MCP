@@ -1,5 +1,7 @@
 # Release gate
 
+> 该脚本是上游 6.0.1 历史门禁，不能作为当前 6.2/0.7.0 已验收的声明。本轮按用户策略未运行它；当前范围与实际未验证项见 `docs/WORKFLOW_6_2.md`。
+
 `scripts/release_gate.ps1` 是 Windows / Isaac Sim 6.0.1 的 fail-closed release 檢查。它不會 commit、push、merge 或建立 tag。
 
 ## Strict release run

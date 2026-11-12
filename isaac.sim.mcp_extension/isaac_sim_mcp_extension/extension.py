@@ -29,6 +29,8 @@ Routes incoming socket commands to handler modules via a registry.
 from __future__ import annotations
 
 import copy
+import asyncio
+import os
 import gc
 import inspect
 import time
@@ -42,6 +44,8 @@ import omni.timeline
 import omni.usd
 
 from .adapters import get_adapter
+from . import workflow_context
+from .command_governance import is_write_command
 from .command_governance import (
     IdempotencyLedger,
     attach_command_metadata,
@@ -58,7 +62,7 @@ from .socket_server import SocketServer
 
 
 class MCPExtension(omni.ext.IExt):
-    STAGE_INDEPENDENT_COMMANDS = {"system.get_capabilities"}
+    STAGE_INDEPENDENT_COMMANDS = {"system.get_capabilities", "job.list", "job.get_status", "mpm.get_status"}
 
     def __init__(self):
         super().__init__()
@@ -69,11 +73,13 @@ class MCPExtension(omni.ext.IExt):
         self._server: SocketServer | None = None
         self._play_sub = None
         self._idempotency = IdempotencyLedger()
+        self._write_lock = asyncio.Lock()
 
     def on_startup(self, ext_id: str) -> None:
         print("trigger  on_startup for: ", ext_id)
         self.ext_id = ext_id
-        port = self._settings.get("/exts/isaac.sim.mcp/server.port") or 8766
+        workflow_context.start()
+        port = self._settings.get("/exts/isaac.sim.mcp/server.port") or int(os.getenv("ISAAC_MCP_PORT", "8766"))
         host = self._settings.get("/exts/isaac.sim.mcp/server.host") or "localhost"
 
         # Load IRA while Kit is still starting, before the first stage opens.
@@ -130,6 +136,7 @@ class MCPExtension(omni.ext.IExt):
             except Exception as exc:
                 print("motion teardown during extension shutdown failed:", exc)
         self._play_sub = None
+        workflow_context.stop()
         self._idempotency.clear()
         self._registry.clear()
         gc.collect()
@@ -155,6 +162,16 @@ class MCPExtension(omni.ext.IExt):
             return False
 
     async def _execute_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
+        if not is_write_command(str(command.get("type", ""))):
+            return await self._execute_command_inner(command)
+        async with self._write_lock:
+            expected = command.get("_queued_stage_id")
+            if expected is not None and expected != workflow_context.queued_stage_id():
+                return normalize_response({"status": "error", "code": "STALE_CONTEXT",
+                                           "message": "Stage changed after this write was queued", "applied": False})
+            return await self._execute_command_inner(command)
+
+    async def _execute_command_inner(self, command: Dict[str, Any]) -> Dict[str, Any]:
         started = time.perf_counter()
         cmd_type = command.get("type", "")
         if not isinstance(cmd_type, str) or not cmd_type:

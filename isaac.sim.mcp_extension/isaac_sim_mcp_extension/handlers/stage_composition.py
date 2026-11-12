@@ -6,12 +6,17 @@
 from __future__ import annotations
 
 import math
+import json
+import time
+from collections import OrderedDict
 import os
 import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 from ..adapters.base import IsaacAdapterBase
+from .. import usd_transactions as transactions
+from ..workflow_context import context, register_reset
 
 TYPE_NAMES = {
     "bool",
@@ -63,15 +68,11 @@ def _error(code: str, message: str, **data: Any) -> Dict[str, Any]:
 
 
 def _require_stopped(adapter: IsaacAdapterBase) -> Optional[Dict[str, Any]]:
-    try:
-        state = adapter.get_simulation_state()
-    except Exception:
-        return None
-    timeline = str((state or {}).get("timeline_state") or (state or {}).get("state") or "").lower()
-    playing = bool((state or {}).get("playing")) or timeline in {"playing", "play"}
-    if playing:
-        return _error("TIMELINE_NOT_STOPPED", "Stage composition writes require a stopped timeline")
+    import omni.timeline
+    if not omni.timeline.get_timeline_interface().is_stopped():
+        return _error("TIMELINE_NOT_STOPPED", "Stop the timeline explicitly before stage edits")
     return None
+
 
 
 def _resolved_path(path: str) -> Path:
@@ -109,33 +110,24 @@ def _require_scratch(scratch_stage: bool, scratch_root: Optional[str]) -> Option
     return None
 
 
-def _stage_snapshot(stage) -> Dict[str, Any]:
-    root = stage.GetRootLayer()
-    session = stage.GetSessionLayer()
-    return {
-        "root": root.ExportToString(),
-        "session": session.ExportToString() if session else None,
-        "edit_target": stage.GetEditTarget().GetLayer().identifier,
-        "load_rules": stage.GetLoadRules(),
-    }
+def _stage_snapshot(stage):
+    return transactions.capture(stage)
 
 
-def _restore_stage(stage, snapshot: Mapping[str, Any]) -> None:
-    stage.GetRootLayer().ImportFromString(str(snapshot["root"]))
-    session = stage.GetSessionLayer()
-    if session and snapshot.get("session") is not None:
-        session.ImportFromString(str(snapshot["session"]))
-    if snapshot.get("load_rules") is not None:
-        stage.SetLoadRules(snapshot["load_rules"])
+def _restore_stage(stage, snapshot):
+    result = transactions.restore(stage, snapshot)
+    if not result["rolled_back"]:
+        raise RuntimeError("ROLLBACK_FAILED: " + json.dumps(result))
+    return result
 
 
-def _restore_context_stage(snapshot: Mapping[str, Any]) -> None:
+
+def _restore_context_stage(snapshot):
     import omni.usd
-
-    context = omni.usd.get_context()
-    context.new_stage()
-    stage = context.get_stage()
-    _restore_stage(stage, snapshot)
+    usd_context = omni.usd.get_context()
+    if not usd_context.open_stage(snapshot["context"]["root_identifier"]):
+        raise RuntimeError("Could not restore the previous stage")
+    _restore_stage(usd_context.get_stage(), snapshot)
 
 
 def _json_value(value: Any) -> Any:
@@ -343,7 +335,7 @@ def save_stage_as(
         return _error("SAVE_STAGE_FAILED", str(exc))
 
 
-def _composition_data(stage, root_path: str = "/") -> Dict[str, Any]:
+def _composition_data(stage, root_path: str = "/", offset: int = 0, limit: int = 1000) -> Dict[str, Any]:
     root = stage.GetRootLayer()
     prims = []
     variants = []
@@ -355,7 +347,13 @@ def _composition_data(stage, root_path: str = "/") -> Dict[str, Any]:
         from pxr import Usd
 
         traversal = Usd.PrimRange(_prim(stage, root_path))
-    for prim in traversal:
+    truncated = False
+    for index, prim in enumerate(traversal):
+        if index < offset:
+            continue
+        if len(prims) >= limit:
+            truncated = True
+            break
         path = str(prim.GetPath())
         prims.append(path)
         selections = dict(prim.GetVariantSets().GetAllVariantSelections())
@@ -369,10 +367,14 @@ def _composition_data(stage, root_path: str = "/") -> Dict[str, Any]:
         if labels:
             semantics.append({"prim_path": path, "labels": labels})
     return {
+        "context": context(stage),
         "root_layer": _layer_record(root),
         "query_root_path": root_path,
         "layer_stack": [_layer_record(layer) for layer in stage.GetLayerStack(includeSessionLayers=True)],
         "prim_count": len(prims),
+        "prim_count_is_total": offset == 0 and not truncated,
+        "truncated": truncated,
+        "next_offset": offset + limit if truncated else None,
         "prim_paths": prims,
         "composition_arcs": arcs,
         "variant_selections": variants,
@@ -386,9 +388,11 @@ def _composition_data(stage, root_path: str = "/") -> Dict[str, Any]:
     }
 
 
-def get_stage_composition(adapter: IsaacAdapterBase, root_path: str = "/") -> Dict[str, Any]:
+def get_stage_composition(adapter: IsaacAdapterBase, root_path: str = "/", offset: int = 0, limit: int = 1000) -> Dict[str, Any]:
     try:
-        data = _composition_data(adapter.get_stage(), root_path=root_path)
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 10000:
+            raise ValueError("offset must be non-negative; limit must be 1..10000")
+        data = _composition_data(adapter.get_stage(), root_path=root_path, offset=offset, limit=limit)
         return {"status": "success", "message": "Stage composition read", "data": data, "readback": data}
     except Exception as exc:
         return _error("STAGE_COMPOSITION_READ_FAILED", str(exc))
@@ -428,7 +432,7 @@ def edit_sublayer(
             "data": {"preview": True, **operation},
             "readback": {"sub_layer_paths": paths},
         }
-    snapshot = root.ExportToString()
+    snapshot = transactions.capture(stage, [root])
     try:
         if action == "add":
             insert_at = len(paths) if int(index) < 0 else int(index)
@@ -448,12 +452,7 @@ def edit_sublayer(
             "readback": {"sub_layer_paths": actual},
         }
     except Exception as exc:
-        root.ImportFromString(snapshot)
-        return _error(
-            "SUBLAYER_EDIT_FAILED",
-            str(exc),
-            readback={"rolled_back": True, "sub_layer_paths": list(root.subLayerPaths)},
-        )
+        return transactions.failure(stage, snapshot, exc, "SUBLAYER_EDIT_FAILED")
 
 
 def edit_composition_arc(
@@ -498,7 +497,7 @@ def edit_composition_arc(
             "data": {"preview": True, **operation},
             "readback": {"items": before, "loaded": bool(prim.IsLoaded())},
         }
-    snapshot = _stage_snapshot(stage)
+    snapshot = transactions.capture(stage, [] if action in {"load", "unload"} else [stage.GetEditTarget().GetLayer()])
     try:
         editor = prim.GetReferences() if arc_type == "reference" else prim.GetPayloads()
         if action == "add":
@@ -531,8 +530,7 @@ def edit_composition_arc(
             "readback": {"items": after, "loaded": loaded},
         }
     except Exception as exc:
-        _restore_stage(stage, snapshot)
-        return _error("COMPOSITION_ARC_EDIT_FAILED", str(exc), readback={"rolled_back": True})
+        return transactions.failure(stage, snapshot, exc, "COMPOSITION_ARC_EDIT_FAILED")
 
 
 def set_variant_selection(
@@ -559,7 +557,7 @@ def set_variant_selection(
             "data": {"preview": True, **operation},
             "readback": {"available": names, "selection": variant.GetVariantSelection()},
         }
-    previous = variant.GetVariantSelection()
+    snapshot = transactions.capture(adapter.get_stage(), [adapter.get_stage().GetEditTarget().GetLayer()])
     try:
         if not variant.SetVariantSelection(selection):
             raise RuntimeError("USD rejected the variant selection")
@@ -573,12 +571,7 @@ def set_variant_selection(
             "readback": {"available": names, "selection": actual},
         }
     except Exception as exc:
-        variant.SetVariantSelection(previous)
-        return _error(
-            "VARIANT_SELECTION_FAILED",
-            str(exc),
-            readback={"rolled_back": True, "selection": variant.GetVariantSelection()},
-        )
+        return transactions.failure(adapter.get_stage(), snapshot, exc, "VARIANT_SELECTION_FAILED")
 
 
 def _semantic_records(prim) -> list[Dict[str, Any]]:
@@ -659,7 +652,7 @@ def set_semantic_labels(
                 "data": {"preview": True, **operation},
                 "readback": {"labels": before},
             }
-        snapshot = _stage_snapshot(adapter.get_stage())
+        snapshot = transactions.capture(adapter.get_stage(), [adapter.get_stage().GetEditTarget().GetLayer()])
         api = UsdSemantics.LabelsAPI.Apply(prim, taxonomy)
         attr = api.GetLabelsAttr()
         applied_labels = normalized_labels
@@ -680,8 +673,8 @@ def set_semantic_labels(
         }
     except Exception as exc:
         if "snapshot" in locals():
-            _restore_stage(adapter.get_stage(), snapshot)
-        return _error("SEMANTIC_WRITE_FAILED", str(exc), readback={"rolled_back": "snapshot" in locals()})
+            return transactions.failure(adapter.get_stage(), snapshot, exc, "SEMANTIC_WRITE_FAILED")
+        return _error("SEMANTIC_WRITE_FAILED", str(exc), applied=False)
 
 
 def _type_name(type_name: str):
@@ -762,7 +755,7 @@ def _typed_value(type_name: str, value: Any) -> Any:
     return constructors[type_name](*values)
 
 
-def get_typed_attribute(adapter: IsaacAdapterBase, prim_path: str, attribute: str) -> Dict[str, Any]:
+def get_typed_attribute(adapter: IsaacAdapterBase, prim_path: str, attribute: str, include_source: bool = False) -> Dict[str, Any]:
     try:
         attr = _prim(adapter.get_stage(), prim_path).GetAttribute(str(attribute))
         if not attr or not attr.IsValid():
@@ -774,6 +767,16 @@ def get_typed_attribute(adapter: IsaacAdapterBase, prim_path: str, attribute: st
             "value": _json_value(attr.Get()),
             "authored": bool(attr.HasAuthoredValueOpinion()),
         }
+        if include_source:
+            specs = attr.GetPropertyStack()
+            record["source"] = {
+                "opinions": [{"layer": x.layer.identifier, "spec_path": str(x.path),
+                              "has_default": x.HasInfo("default")} for x in specs[:32]],
+                "truncated": len(specs) > 32,
+                "context": context(adapter.get_stage()),
+                "units": "unknown", "meters_per_unit": adapter.get_stage().GetMetadata("metersPerUnit"),
+                "note": "Stage units are not a unit declaration for arbitrary attributes",
+            }
         return {"status": "success", "message": "Typed attribute read", "data": record, "readback": record}
     except Exception as exc:
         return _error("ATTRIBUTE_READ_FAILED", str(exc))
@@ -825,7 +828,7 @@ def set_typed_attribute(
                 "message": "Typed attribute preview validated",
                 "data": {"preview": True, **operation},
             }
-        snapshot = _stage_snapshot(adapter.get_stage())
+        snapshot = transactions.capture(adapter.get_stage(), [adapter.get_stage().GetEditTarget().GetLayer()])
         attr = (
             existing
             if existing and existing.IsValid()
@@ -844,8 +847,8 @@ def set_typed_attribute(
         }
     except Exception as exc:
         if "snapshot" in locals():
-            _restore_stage(adapter.get_stage(), snapshot)
-        return _error("ATTRIBUTE_WRITE_FAILED", str(exc), readback={"rolled_back": "snapshot" in locals()})
+            return transactions.failure(adapter.get_stage(), snapshot, exc, "ATTRIBUTE_WRITE_FAILED")
+        return _error("ATTRIBUTE_WRITE_FAILED", str(exc), applied=False)
 
 
 def _dispatch_batch_operation(adapter: IsaacAdapterBase, operation: Mapping[str, Any]) -> Dict[str, Any]:
@@ -867,6 +870,7 @@ def apply_stage_batch(
     operations: Sequence[Mapping[str, Any]],
     preview: bool = True,
     readback_root_path: str = "/",
+    plan_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     stopped = _require_stopped(adapter)
     if stopped:
@@ -905,14 +909,30 @@ def apply_stage_batch(
                     f"Operation {index} failed validation: {result.get('message')}",
                     data={"operations": previews},
                 )
+        stage = adapter.get_stage()
+        snapshot = _batch_snapshot(stage, normalized)
+        token = _remember_plan(snapshot, normalized)
         return {
             "status": "success",
+            "plan_id": token,
+            "context": snapshot["context"],
             "message": "Batch preview validated",
             "data": {"preview": True, "operations": previews},
             "readback": get_stage_composition(adapter, root_path=readback_root_path).get("data"),
         }
     stage = adapter.get_stage()
-    snapshot = _stage_snapshot(stage)
+    if plan_id is not None:
+        item = _plans.get(plan_id)
+        if item is None or item["expires"] < time.monotonic():
+            return _error("STALE_PLAN", "Plan expired or does not exist", applied=False)
+        if normalized != item["operations"]:
+            return _error("STALE_PLAN", "Operations differ from preview", applied=False)
+        try:
+            transactions.require_unchanged(stage, item["snapshot"])
+        except ValueError as exc:
+            return _error("STALE_PLAN", str(exc), applied=False)
+        _plans.pop(plan_id)
+    snapshot = _batch_snapshot(stage, normalized)
     results = []
     try:
         for index, operation in enumerate(normalized):
@@ -934,17 +954,45 @@ def apply_stage_batch(
         return {
             "status": "success",
             "message": f"Applied {len(results)} stage operations atomically",
-            "data": {"operations": results},
+            "data": {"operations": results, "transaction_id": transactions.retain(stage, snapshot)},
             "readback": composition,
         }
     except Exception as exc:
-        _restore_stage(stage, snapshot)
-        return _error(
-            "BATCH_ROLLED_BACK",
-            str(exc),
-            data={"operations": results},
-            readback={
-                "rolled_back": True,
-                "composition": get_stage_composition(adapter, root_path=readback_root_path).get("data"),
-            },
-        )
+        result = transactions.failure(stage, snapshot, exc, "BATCH_ROLLED_BACK")
+        result["data"] = {"operations": results}
+        return result
+
+
+_plans = OrderedDict()
+register_reset("stage_plans", _plans.clear)
+
+
+def _batch_snapshot(stage, operations):
+    layers = set()
+    target = stage.GetEditTarget()
+    for operation in operations:
+        if operation["operation"] == "edit_sublayer":
+            layer = stage.GetRootLayer()
+        elif operation["operation"] == "edit_composition_arc" and operation["action"] in {"load", "unload"}:
+            continue
+        else:
+            layer = target.GetLayer()
+            prim = _prim(stage, operation["prim_path"])
+            if prim.IsInstanceProxy() or not target.MapToSpecPath(prim.GetPath()):
+                raise ValueError("Edit target cannot map this prim: " + operation["prim_path"])
+        if not layer.permissionToEdit:
+            raise ValueError("Layer is not editable: " + layer.identifier)
+        layers.add(layer)
+    return transactions.capture(stage, layers)
+
+
+def _remember_plan(snapshot, operations):
+    now = time.monotonic()
+    for key in list(_plans):
+        if _plans[key]["expires"] < now:
+            _plans.pop(key)
+    while _plans and (len(_plans) >= 16 or sum(x["snapshot"]["bytes"] for x in _plans.values()) + snapshot["bytes"] > transactions.MAX_BYTES):
+        _plans.popitem(last=False)
+    token = "plan-" + uuid.uuid4().hex
+    _plans[token] = {"snapshot": snapshot, "operations": operations, "expires": now + transactions.TTL_SECONDS}
+    return token

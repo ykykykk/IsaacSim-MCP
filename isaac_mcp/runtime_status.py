@@ -367,6 +367,26 @@ def _recommended_actions(code: str, state: str) -> list[str]:
     return actions
 
 
+def _last_mpm_jobs(port, runtime_identity):
+    base = Path(os.getenv("LOCALAPPDATA", str(Path.home() / ".local/state")))
+    path = Path(os.getenv("ISAAC_MCP_JOB_STATE_FILE", str(base / "IsaacSim-MCP" / "6.2" / f"mpm-{port}.json")))
+    if not path.exists():
+        return {"available": False, "path": str(path)}
+    try:
+        if path.stat().st_size > 131072:
+            raise ValueError("Task journal exceeds 128 KiB")
+        record = json.loads(path.read_text(encoding="utf-8"))
+        identity = runtime_identity or {}
+        jobs = record.get("jobs", [])[-32:]
+        bound = bool(identity.get("instance_id") and record.get("process_id") == identity.get("process_id")
+                     and any((job.get("context") or {}).get("instance_id") == identity["instance_id"] for job in jobs))
+        return {"available": True, "path": str(path), "last_known_only": True,
+                "endpoint_bound": bound, "updated_at": record.get("updated_at"), "jobs": jobs,
+                "note": "Persisted phase, not live progress; a timeout does not mean cancellation or failure"}
+    except (OSError, ValueError, TypeError) as exc:
+        return {"available": False, "path": str(path), "error": str(exc)}
+
+
 def get_runtime_status(
     *,
     host: str = "127.0.0.1",
@@ -438,6 +458,8 @@ def get_runtime_status(
         "busy_or_unresponsive" if health.get("port_open") else "disconnected"
     )
     state["runtime_identity"] = runtime_identity
+    if host in {"127.0.0.1", "localhost", "::1"}:
+        state["mpm_jobs"] = _last_mpm_jobs(effective_port, runtime_identity)
     state["runtime_responding"] = responding
     state["health"] = health
     state["diagnostics"] = diagnostics

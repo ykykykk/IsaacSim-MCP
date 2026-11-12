@@ -1,6 +1,6 @@
 [package]
 name = "isaacsim-mcp-server"
-version = "0.6.0+bauma.20261112"
+version = "0.7.0"
 title = "Isaac Sim MCP Server"
 description = "MCP server extension for Isaac Sim to enable communication with Claude and other AI assistants"
 category = "Robotics"
@@ -38,7 +38,7 @@ name = "isaac_sim_mcp_extension"
 
 
 [settings]
-server.port = 8876
+server.port = 8766
 server.host = "127.0.0.1"
 # Load NVIDIA IRA before the first USD stage opens. Navigation Core can miss
 # NavMeshVolume discovery when it is enabled late against an already-open

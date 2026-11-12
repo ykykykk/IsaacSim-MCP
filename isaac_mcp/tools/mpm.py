@@ -65,3 +65,13 @@ def register_tools(mcp, get_connection: Callable) -> None:
             "expected_stage": expected_stage, "prim_path": prim_path,
             "expected_config_sha256": expected_config_sha256, "preview": preview,
         })
+
+    @mcp.tool("list_mpm_configs")
+    def list_mpm_configs(offset: int = 0, limit: int = 50) -> dict:
+        """List MPM config prims in loaded active scene content without loading payloads.
+
+        Args:
+            offset: Non-negative result offset.
+            limit: Page size, 1..100.
+        """
+        return get_connection().send_command("mpm.list_configs", {"offset": offset, "limit": limit})

@@ -77,3 +77,32 @@ def select_tool_names(names: Iterable[str], profile: str | None = None) -> tuple
     elif resolved == "consolidated":
         selected.difference_update(REPLACED_LEGACY_TOOLS)
     return tuple(sorted(selected))
+
+
+DOMAIN_MODULES = {
+    "core": {"capabilities", "jobs", "artifacts", "simulation"},
+    "scene": {"scene", "objects", "materials", "lighting", "assets", "graphs", "workflow"},
+    "physics": {"physics"},
+    "robotics": {"robots", "controllers", "motion", "ros2", "sensors"},
+    "mpm": {"mpm"},
+    "sdg": {"replicator", "humans"},
+}
+
+
+def resolve_tool_domains(value=None):
+    text = os.getenv("ISAAC_MCP_TOOL_DOMAINS", "all") if value is None else value
+    names = {item.strip() for item in text.split(",") if item.strip()}
+    if names == {"all"}:
+        return frozenset(DOMAIN_MODULES)
+    if not names or names - DOMAIN_MODULES.keys():
+        raise ValueError("ISAAC_MCP_TOOL_DOMAINS must be all or comma-separated " + ", ".join(DOMAIN_MODULES))
+    return frozenset(names | {"core"})
+
+
+def select_domain_names(records, domains=None):
+    modules = set().union(*(DOMAIN_MODULES[name] for name in resolve_tool_domains(domains)))
+    selected = {item["tool"] for item in records if item["module"] in modules}
+    for canonical, originals in CONSOLIDATED_REPLACEMENTS.items():
+        if any(name in selected for name in originals):
+            selected.add(canonical)
+    return selected

@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from .. import __version__
@@ -42,6 +44,7 @@ RELEVANT_EXTENSIONS = (
     "omni.graph.action",
     "omni.graph.scriptnode",
     "sany.granular_mpm",
+    "bauma.save_to_source",
 )
 
 
@@ -133,7 +136,24 @@ def _runtime_info(adapter: IsaacAdapterBase) -> Dict[str, Any]:
     import carb.tokens
 
     log_file = carb.settings.get_settings().get("/log/file")
+    from ..workflow_context import context
+    from .. import __file__ as module_path
+    manager = _extension_manager()
+    extension_id = manager.get_enabled_extension_id(EXTENSION_ID)
+    providers = {}
+    for extension, module in (("sany.granular_mpm", "sany.granular_mpm.agent_api"),
+                              ("bauma.save_to_source", "bauma.save_to_source.agent_api")):
+        enabled = manager.is_extension_enabled(extension)
+        api = sys.modules.get(module)
+        providers[extension] = {"enabled": bool(enabled), "api_version": getattr(api, "API_VERSION", None),
+                                "operations": getattr(api, "CAPABILITIES", [])}
     return {
+        **context(adapter.get_stage()),
+        "extension_origin": manager.get_extension_path(extension_id) if extension_id else None,
+        "extension_module": str(Path(module_path).resolve()),
+        "extension_code_version": __version__,
+        "source_revision": os.getenv("ISAAC_MCP_SOURCE_REVISION", "unknown"),
+        "provider_capabilities": providers,
         "process_id": os.getpid(),
         "log_file": carb.tokens.get_tokens_interface().resolve(log_file) if log_file else None,
         "isaac_sim_version": isaac_sim_version,
@@ -209,7 +229,7 @@ def _feature_flags(
     navigation_core_enabled: Optional[bool] = None,
 ) -> Dict[str, Dict[str, Any]]:
     lidar_config_state = "supported" if adapter_generation == 6 else "partial"
-    fallback_verification = "verified" if physics_backend == "physx" else "unverified"
+    fallback_verification = "unverified"
     camera_backend_state, _camera_verification = _backend_feature(
         backend_matrix,
         "sensor.camera",

@@ -14,7 +14,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from isaac_mcp.tool_profiles import resolve_tool_profile, select_tool_names
+from isaac_mcp.tool_profiles import resolve_tool_profile, select_tool_names, select_domain_names
 
 TOOLS_ROOT = Path(__file__).resolve().parent / "tools"
 MCP_LOCAL_TOOL_NAMES = frozenset({"get_runtime_status"})
@@ -55,10 +55,11 @@ def _full_inventory() -> list[dict[str, Any]]:
     return sorted(tools, key=lambda item: item["tool"])
 
 
-def inventory(profile: str | None = "legacy") -> list[dict[str, Any]]:
+def inventory(profile: str | None = "legacy", domains: str | None = None) -> list[dict[str, Any]]:
     """Return named tools for one public profile; legacy remains the default."""
     records = _full_inventory()
     selected = set(select_tool_names((item["tool"] for item in records), resolve_tool_profile(profile)))
+    selected.intersection_update(select_domain_names(records, domains))
     return [item for item in records if item["tool"] in selected]
 
 
@@ -72,8 +73,7 @@ def all_tool_names() -> tuple[str, ...]:
 
 def tool_names(profile: str | None = "legacy") -> tuple[str, ...]:
     """Return the unique public tool names for one profile."""
-    names = all_tool_names()
-    return select_tool_names(names, resolve_tool_profile(profile))
+    return tuple(item["tool"] for item in inventory(profile))
 
 
 def tool_count(profile: str | None = "legacy") -> int:

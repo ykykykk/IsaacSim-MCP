@@ -70,3 +70,10 @@ $env:ISAAC_MCP_TOOL_PROFILE = "consolidated"
 - `consolidated` 只隱藏被取代的 public wrappers；未參與合併的 tools 保持原樣。
 - `full` 不能當成一般 production profile，因為較大的 action space 會降低 agent 選擇精準度。
 - `get_capabilities` 回報目前 profile 與 public tool count；client 不應硬編碼數量。
+
+
+## 0.7.0 领域过滤
+
+`ISAAC_MCP_TOOL_DOMAINS` 与 profile 正交：all（通用默认），或 core、scene、physics、robotics、mpm、sdg 的逗号组合。
+core 始终包含；过滤结果启动后固定，需重新连接客户端更新列表。本机 config.local.json 使用 core,scene,physics,mpm。
+完整 inventory 生成时显式选 all，不受机器配置影响。详见 docs/WORKFLOW_6_2.md。

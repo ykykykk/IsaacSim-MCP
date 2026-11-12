@@ -4,14 +4,16 @@
 
 [CmdletBinding()]
 param(
-    [string]$IsaacSimRoot = $env:ISAACSIM_ROOT,
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
+    [string]$IsaacSimRoot,
+    [int]$Port,
     [string]$PhysicsGpu,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$IsaacArgs
 )
 
 $ErrorActionPreference = "Stop"
+$McpLauncherParameters = $PSBoundParameters
+. (Join-Path $PSScriptRoot "Resolve-McpConfig.ps1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $extensionManifest = Join-Path $repoRoot "isaac.sim.mcp_extension\config\extension.toml"
 $extensionId = "isaac.sim.mcp_extension"
@@ -100,16 +102,6 @@ if ($effectivePhysicsGpu -eq -1) {
 
 if (-not (Test-Path -LiteralPath $extensionManifest)) {
     throw "Extension manifest not found: $extensionManifest"
-}
-
-if (-not $IsaacSimRoot) {
-    $candidates = @(
-        "F:\isaac-sim\6.2.0"
-    )
-    $IsaacSimRoot = $candidates | Where-Object {
-        (Test-Path -LiteralPath (Join-Path $_ "isaac-sim.bat")) -or
-        (Test-Path -LiteralPath (Join-Path $_ "Scripts\isaacsim.exe"))
-    } | Select-Object -First 1
 }
 
 if (-not $IsaacSimRoot -or -not (Test-Path -LiteralPath $IsaacSimRoot)) {

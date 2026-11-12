@@ -4,12 +4,14 @@
 
 [CmdletBinding()]
 param(
-    [int]$Port = $(if ($env:ISAAC_MCP_PORT) { [int]$env:ISAAC_MCP_PORT } else { 8876 }),
+    [int]$Port,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$ServerArgs
 )
 
 $ErrorActionPreference = "Stop"
+$McpLauncherParameters = $PSBoundParameters
+. (Join-Path $PSScriptRoot "Resolve-McpConfig.ps1")
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $installedCli = Join-Path $repoRoot ".venv\Scripts\isaacsim-mcp-server.exe"

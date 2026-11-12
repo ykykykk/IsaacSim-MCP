@@ -39,6 +39,7 @@ mcp_cache/
 
 # Local MCP and editor configuration
 .mcp.json
+config.local.json
 mcp-inspector*.json
 .mcpregistry_*
 .vscode/*

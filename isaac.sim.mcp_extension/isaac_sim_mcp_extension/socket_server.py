@@ -179,6 +179,10 @@ class SocketServer:
         # eventually crashes kit when the rendering throttle / animation
         # graph tasks get killed mid-flight. See `v6.step` for the
         # SimulationManager.step replacement that avoids pumping the loop.
+        from .workflow_context import queued_stage_id
+
+        command["_queued_stage_id"] = queued_stage_id()
+
         async def execute_wrapper() -> None:
             try:
                 response = self._command_handler(command)
